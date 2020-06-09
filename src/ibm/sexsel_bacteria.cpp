@@ -59,7 +59,7 @@ void init_pop()
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
         Susceptible[S_idx].x = init_x;
-        Susceptible[S_idx].nplasmids;
+        Susceptible[S_idx].nplasmids = 0;
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 
     // initialize infected individuals
@@ -74,13 +74,18 @@ void init_pop()
             Infected[I_idx].plasmid_good[plasmid_idx] = uniform(rng_r) < 0.5;
         }
 
-        Infected[I_idx].plasmid_good[
+//        Infected[I_idx].plasmid_good[
     }
 }//end void 
 
+void init_arguments(int argc, char ** argv)
+{
+
+}//end init_arguments()
+
 int main(int argc, char **argv)
 {
-    init_arguments();
+    init_arguments(argc, argv);
     init_pop();
 }
 

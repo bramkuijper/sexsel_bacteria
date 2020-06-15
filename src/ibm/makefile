@@ -1,5 +1,5 @@
 CXX=g++
-FLAGS=-Wall -O3
+FLAGS=-Wall -O3 -std=c++11
 EXE=sexsel_bacteria.exe
 CPP=sexsel_bacteria.cpp
 

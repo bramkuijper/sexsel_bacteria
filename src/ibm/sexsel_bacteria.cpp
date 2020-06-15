@@ -158,24 +158,21 @@ void event_chooser(int const time_step)
     // re an individual's birth
     std::vector <double> birth_weights;
 
+    // go through all susceptibles and calculate birth probs
+    for (int S_idx = 0; S_idx < Ns; ++S_idx)
+    {
+        birth_weights.push_back(prob_birth_susceptible);
+    }
+
     // birth of a susceptible host (from another one) 
     // is easy as we do not need to
     // track any plasmids.
-    double prob_birth_susceptible = cumul_birth = b * (1.0 - kappa * N) * S;
-    birth_weights.push_back(prob_birth_susceptible);
-
-
 
     // now go through the infected hosts and determine
     // their plasmid phenotype 
     for (int inf_idx = 0; inf_idx < Ni; ++inf_idx)
     {
-        fraction_good = 0.0;
-        for (int plasmid_idx = 0; plasmid_idx < Infected.nplasmids; ++plasmid_idx)
-        {
-        }
-
-        birth_weights.push_back(
+        fecundity(Infected[inf_idx].fraction_good) * b
     }
 }
 

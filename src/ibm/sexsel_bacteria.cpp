@@ -49,11 +49,15 @@ struct Individual
     double x;
     
     // list of good vs bad plasmids
+    // note that we allow potentially for 
+    // larger number of plasmids / cell than just 2
     bool plasmid_good[nplasmid_max];
 
     // number of plasmids carried by individual
     int nplasmids;
 
+    // actual plasmid phenotype is then the fraction
+    // of good plasmids (i.e., additive effects)
     double fraction_good;
 };
 
@@ -73,7 +77,7 @@ void init_pop()
 {
     // auxiliary variable to keep track
     // of the fraction of good plasmids in each infected
-    double fraction_good;
+    int n_good;
 
     // initialize susceptibles
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
@@ -93,8 +97,18 @@ void init_pop()
 
         for (int plasmid_idx = 0; plasmid_idx < n_plasmid_init; ++plasmid_idx)
         {
-            // determine whether individual carries good / bad plasmid
-            Infected[I_idx].plasmid_good[plasmid_idx] = uniform(rng_r) < p_good_init;
+            if (uniform(rng_r) < p_good_init)
+            {
+                ++n_good;
+                // determine whether individual carries good / bad plasmid
+                Infected[I_idx].plasmid_good[plasmid_idx] = true;
+            }
+            else
+            {
+                Infected[I_idx].plasmid_good[plasmid_idx] = false;
+            }
+
+            Infected[I_idx].fraction_good = (double)n_good/n_plasmid_init;
         }
     }
 }//end void 

@@ -61,6 +61,14 @@ double dG = 0.0;
 // death rate host infected only with bad plasmids
 double dB = 0.0;
 
+// probability of co-infection
+double sigma = 0.0;
+
+// resistance mutation rate
+double mu_x = 0.0;
+
+double sdmu_x = 0.0;
+
 // number of timesteps that the simulation should run
 int max_time = 10;
 
@@ -75,8 +83,12 @@ struct Individual
     // larger number of plasmids / cell than just 2
     bool plasmid_good[nplasmid_max];
 
-    // number of plasmids carried by individual
+    // actual number of plasmids carried by individual
     int nplasmids;
+
+    // count of the number of good plasmids
+    // needs to be recalculated once we make changes to
+    // plasmid composition
     int nplasmids_good;
 
     // actual plasmid phenotype is then the fraction
@@ -142,6 +154,7 @@ void init_pop()
 // initialize the parameters through the command line
 void init_arguments(int argc, char ** argv)
 {
+    // call 
     max_time = atof(argv[1]);
     p_good_init = atof(argv[2]);
     kappa = atof(argv[3]);
@@ -154,7 +167,8 @@ void init_arguments(int argc, char ** argv)
     d = atof(argv[9]);
     dG = atof(argv[10]);
     dB = atof(argv[11]);
-    base_name = argv[5];
+    sigma = atof(argv[12]);
+    base_name = argv[13];
 
 }//end init_arguments()
 
@@ -173,27 +187,94 @@ void write_parameters(std::ofstream &data_file)
         << "d" << ";" << d << std::endl
         << "dG" << ";" << dG << std::endl
         << "dB" << ";" << dB << std::endl
+        << "sigma" << ";" << sigma << std::endl
         << "kappa" << ";" << kappa << std::endl
+        << "seed" << ";" << seed << std::endl
         << "n_plasmid_init" << ";" << p_good_init << std::endl;
 
 } // end write_parameters()
 
-double mutation()
+double mutation(double const x)
 {
+    if (uniform(rng_r) < mu_x)
+    {
+        std::normal_distribution <double> distribution(0.0,sdmu_x);
+        return(x + distribution(rng_r));
+    }
 
+    return(x);
 }
-    
+
+// infection event of a susceptible with a good
+// or bad plasmid
+void infection_susceptible(
+        int const S_idx
+        ,bool plasmid_good)
+{
+    assert(S_idx >= 0);
+    assert(S_idx < Ns);
+
+    // check indeed that the susceptible individual
+    // is not infected
+    assert(Susceptible[S_idx].nplasmids == 0);
+
+    // assign newly infected to stack of infected
+    // individuals
+    Infected[Ni] = Susceptible[S_idx];
+
+    // update plasmids
+    Infected[Ni].nplasmids = 1;
+
+    // if plasmid good, var set to 1 otherwise 0
+    Infected[Ni].nplasmids_good = plasmid_good;
+    Infected[Ni].plasmid_good[0] = plasmid_good;
+    Infected[Ni].fraction_good = plasmid_good;
+
+    ++Ni;
+
+    // remove old susceptible (now infected)
+    // by overwriting it with the susceptible
+    // at the end of the stack of susceptibles
+    Susceptible[S_idx] = Susceptible[Ns - 1];
+    --Ns;
+
+    // check whether population is still within bounds
+    // with density dependence this should always be the case
+    assert(Ni + Ns <= N);
+}
 
 
 // birth event of an individual
+// is going to be different with 
 void birth(Individual &parent, bool parent_susceptible)
 {
     Individual kid;
 
+    // mutate the resistance allele
     kid.x = mutation(parent.x);
 
-    clamp(kid.x, 0.0, 1.0);
+    std::clamp(kid.x, 0.0, 1.0);
 
+    if (parent_susceptible)
+    {
+        Susceptible[Ns++] = kid;
+    }
+
+    assert(Ns + Ni <= N);
+
+    // TODO add infected
+}
+
+void death_susceptible()
+{
+    std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
+
+    int random_susceptible = susceptible_sampler(rng_r);
+    Susceptible[random_susceptible] = Susceptible[Ns - 1];
+    --Ns;
+
+    assert(Ns >= 0);
+    assert(Ns + Ni <= N);
 }
 
 // write headers to the datafile
@@ -303,6 +384,8 @@ void event_chooser(int const time_step)
 
     total_rates[3] += death_rate_S;
 
+    double co_infection_bad, co_infection_good, death_rate;
+
     // now go through the infected hosts 
     for (int inf_idx = 0; inf_idx < Ni; ++inf_idx)
     {
@@ -310,7 +393,7 @@ void event_chooser(int const time_step)
         rate_birth = F(Infected[inf_idx].fraction_good) * 
             b(Infected[inf_idx].x) * (1.0 - kappa * N);
         
-        birth_rates.push_back(rate_birth);
+        birth_rates_infected.push_back(rate_birth);
 
         total_rates[4] += rate_birth;
 
@@ -349,45 +432,75 @@ void event_chooser(int const time_step)
     // done, now determine what to do by making a weighted distribution
     // this will return a number between 0 and n_events - 1
     // dependent on the relative weighting of each event
-    discrete_distribution<int> total_distribution(total_rates.begin(), total_rates.end());
+    std::discrete_distribution<int> total_distribution(total_rates.begin(), total_rates.end());
+
+    int S_idx;
+
+    int event_type = total_distribution(rng_r);
 
     // now sample a single sample from this discrete distribution
     // this is the type of event that will be chosen
-    switch(total_distribution(rng_r))
+    switch(event_type)
     {
         // next, we now determine the actual individuals
         // affected by the event
         
         case 0: // birth of susceptible
-            discrete_distribution <int> birth_susc_distribution(
+            {
+            std::discrete_distribution <int> birth_susc_distribution(
                     birth_rates_susceptible.begin()
                     ,birth_rates_susceptible.end());
+//
+//            S_idx = birth_susc_distribution(rng_r);
+//
+//            assert(S_idx >= 0);
+//            assert(S_idx < Ns);
+//
+//            // execute the birth() function which also updates the stats
+//            birth(Susceptible[S_idx], true);
 
-            int S_idx = birth_susc_distribution(rng_r);
-
-            assert(S_idx >= 0);
-            assert(S_idx < Ns);
-
-            // execute the birth() function which also updates the stats
-            birth(Susceptible[S_idx], true);
             break;
+            }
 
         case 1: // infection of a susceptible by good plasmid
-            discrete_distribution <int> infection_susceptible_good_dist(
+            {
+            std::discrete_distribution <int> infection_susceptible_good_dist(
                 infection_rate_susceptible_good.begin()
-                infection_rate_susceptible_good.end());
+                ,infection_rate_susceptible_good.end());
 
-            int S_idx = infection_susceptible_good_dist(rng_r);
+            S_idx = infection_susceptible_good_dist(rng_r);
 
             assert(S_idx >= 0);
             assert(S_idx < Ns);
 
-            infection(Susceptible[S_idx], 
+            infection_susceptible(S_idx, true);
 
-    }
-       
-       
-        // end event_chooser(int const time_step)
+            break;
+            }
+        case 2: // infection of a susceptible by a bad plasmid
+            {
+            std::discrete_distribution <int> infection_susceptible_bad_dist(
+                infection_rate_susceptible_bad.begin()
+                ,infection_rate_susceptible_bad.end());
+
+            S_idx = infection_susceptible_bad_dist(rng_r);
+
+            assert(S_idx >= 0);
+            assert(S_idx < Ns);
+
+            infection_susceptible(S_idx, false);
+
+            break;
+            }
+        case 3: // death susceptible
+            death_susceptible();
+            break;
+
+        default:
+            std::cout << "switch error" << std::endl;
+            break;
+    } // end switch
+} // end event_chooser(int const time_step)
 
 int main(int argc, char **argv)
 {

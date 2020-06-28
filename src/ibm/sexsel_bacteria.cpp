@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cassert>
+#include <algorithm>
 #include <vector>
 #include <cmath>
 #include <random>
@@ -255,16 +256,37 @@ void birth(Individual &parent, bool parent_susceptible)
 
     std::clamp(kid.x, 0.0, 1.0);
 
+    kid.nplasmids = 0;
+    kid.nplasmids_good = 0;
+    kid.fraction_good = 0;
+
     if (parent_susceptible)
     {
         Susceptible[Ns++] = kid;
+        assert(Ns + Ni <= N);
+        return;
     }
 
-    assert(Ns + Ni <= N);
+    // for now assuming strict inheritance
+    // later on we might want to introduce segregational effects
+    kid.nplasmids = parent.nplasmids;
 
-    // TODO add infected
+    // birth of infected individual
+    for (int plasmid_idx = 0; plasmid_idx < parent.nplasmids; ++plasmid_idx)
+    {
+        // replicate plasmid to offspring
+        kid.plasmid_good[plasmid_idx] = parent.plasmid_good[plasmid_idx];
+        kid.nplasmids_good += kid.plasmid_good[plasmid_idx];
+    }
+
+    kid.fraction_good = (double)kid.nplasmids_good/kid.nplasmids;
+
+    Infected[Ni++] = kid;
+
+    return;
 }
 
+// death of a susceptible individual
 void death_susceptible()
 {
     std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
@@ -275,7 +297,74 @@ void death_susceptible()
 
     assert(Ns >= 0);
     assert(Ns + Ni <= N);
-}
+}// end death_susceptible()
+
+void loss_plasmid(int const I_idx, bool const plasmid_good)
+{
+    assert(Infected[I_idx].nplasmids > 0);
+
+    if (plasmid_good)
+    {
+        assert(Infected[I_idx].nplasmids_good > 0);
+
+        for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
+        {
+            if (Infected[I_idx].plasmid_good[plasmid_idx])
+            {
+                Infected[I_idx].plasmid_good[plasmid_idx] = 
+                    Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids - 1];
+
+                --Infected[I_idx].nplasmids;
+                --Infected[I_idx].nplasmids_good;
+                break;
+            }
+        }
+
+        if (Infected[I_idx].nplasmids == 0)
+        {
+            Susceptible[Ns++] = Infected[I_idx];
+
+            //
+            Infected[I_idx] = Infected[Ni - 1];
+            --Ni;
+        }
+        else
+        {
+            Infected[I_idx].fraction_good  = (double) Infected[I_idx].nplasmids_good / 
+                    Infected[I_idx].nplasmids;
+        }
+
+        return;
+    } // end if (plasmid_good)
+
+
+    assert(Infected[I_idx].nplasmids - Infected[I_idx].nplasmids_good > 0);
+
+    for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
+    {
+        if (!Infected[I_idx].plasmid_good[plasmid_idx])
+        {
+            Infected[I_idx].plasmid_good[plasmid_idx] = Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids - 1];
+            --Infected[I_idx].nplasmids;
+            break;
+        }
+    }
+
+    if (Infected[I_idx].nplasmids == 0)
+    {
+        Susceptible[Ns++] = Infected[I_idx];
+
+        // delete infected individual
+        Infected[I_idx] = Infected[Ni - 1];
+        --Ni;
+    }
+    else
+    {
+        Infected[I_idx].fraction_good  = (double) Infected[I_idx].nplasmids_good / 
+                Infected[I_idx].nplasmids;
+    }
+    return;
+}// end loss_plasmid()
 
 // write headers to the datafile
 void write_data_headers(std::ofstream &data_file)
@@ -356,13 +445,13 @@ void event_chooser(int const time_step)
     // and infection rates
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
-        // 1. Birth of susceptibles
+        // 0. Birth of susceptibles
         rate_birth = b(Susceptible[S_idx].x) * (1.0 - kappa * N);
         birth_rates_susceptible.push_back(rate_birth);
 
         total_rates[0] += rate_birth;
 
-        // 2. infection of susceptible by good plasmid
+        // 1. infection of susceptible by good plasmid
         // note that infection rates are independent of the number of 
         // bacteria already infected
         rate_infect = (1.0 - Susceptible[S_idx].x) * psi_G;
@@ -370,7 +459,7 @@ void event_chooser(int const time_step)
         
         total_rates[1] += rate_infect;
         
-        // 3. infection of susceptible by bad plasmid
+        // 2. infection of susceptible by bad plasmid
         // note that infection rates are independent of the number of 
         // bacteria already infected
         rate_infect = (1.0 - Susceptible[S_idx].x) * psi_B;
@@ -379,7 +468,7 @@ void event_chooser(int const time_step)
         total_rates[2] += rate_infect;
     }
 
-    // 4. Deaths susceptibles
+    // 3. Deaths susceptibles
     double death_rate_S = Ns * d;
 
     total_rates[3] += death_rate_S;
@@ -389,7 +478,7 @@ void event_chooser(int const time_step)
     // now go through the infected hosts 
     for (int inf_idx = 0; inf_idx < Ni; ++inf_idx)
     {
-        // 5. birth infected host
+        // 4. birth infected host
         rate_birth = F(Infected[inf_idx].fraction_good) * 
             b(Infected[inf_idx].x) * (1.0 - kappa * N);
         
@@ -397,7 +486,7 @@ void event_chooser(int const time_step)
 
         total_rates[4] += rate_birth;
 
-        // 6, 7. loss of a good or bad plasmid 
+        // 5, 6. loss of a good or bad plasmid 
         // a single plasmid loss event
         gamma_loss(rate_loss_good, rate_loss_bad, Infected[inf_idx]);
 
@@ -410,7 +499,7 @@ void event_chooser(int const time_step)
         loss_rates_bad.push_back(rate_loss_bad);
         total_rates[6] += rate_loss_bad;
 
-        // 8. death rate infected
+        // 7. death rate infected
         death_rate = Infected[inf_idx].fraction_good * dG + 
             (1.0 - Infected[inf_idx].fraction_good) * dB;
 
@@ -434,7 +523,7 @@ void event_chooser(int const time_step)
     // dependent on the relative weighting of each event
     std::discrete_distribution<int> total_distribution(total_rates.begin(), total_rates.end());
 
-    int S_idx;
+    int S_idx,I_idx;
 
     int event_type = total_distribution(rng_r);
 
@@ -450,14 +539,14 @@ void event_chooser(int const time_step)
             std::discrete_distribution <int> birth_susc_distribution(
                     birth_rates_susceptible.begin()
                     ,birth_rates_susceptible.end());
-//
-//            S_idx = birth_susc_distribution(rng_r);
-//
-//            assert(S_idx >= 0);
-//            assert(S_idx < Ns);
-//
-//            // execute the birth() function which also updates the stats
-//            birth(Susceptible[S_idx], true);
+
+            S_idx = birth_susc_distribution(rng_r);
+
+            assert(S_idx >= 0);
+            assert(S_idx < Ns);
+
+            // execute the birth() function which also updates the stats
+            birth(Susceptible[S_idx], true);
 
             break;
             }
@@ -495,6 +584,61 @@ void event_chooser(int const time_step)
         case 3: // death susceptible
             death_susceptible();
             break;
+        case 4: // birth infected host
+            {
+            std::discrete_distribution <int> birth_infected_dist(
+                birth_rates_infected.begin()
+                ,birth_rates_infected.end());
+
+            I_idx = birth_infected_dist(rng_r);
+
+            assert(I_idx >= 0);
+            assert(I_idx < Ni);
+
+            birth(Infected[I_idx], false);
+            }
+            break;
+
+        case 5: // loss of a single good plasmid
+            {
+            std::discrete_distribution <int> loss_good_plasmid_dist(
+                    loss_rates_good.begin()
+                    ,loss_rates_good.end());
+
+            I_idx = loss_good_plasmid_dist(rng_r);
+
+            assert(I_idx >= 0);
+            assert(I_idx < Ni);
+            
+            loss_plasmid(I_idx, true);
+            
+            break;
+            }
+
+        case 6: // loss of a single bad plasmid
+            {
+            std::discrete_distribution <int> loss_bad_plasmid_dist(
+                    loss_rates_bad.begin()
+                    ,loss_rates_bad.end());
+
+            I_idx = loss_bad_plasmid_dist(rng_r);
+
+            assert(I_idx >= 0);
+            assert(I_idx < Ni);
+            
+            loss_plasmid(I_idx, false);
+            
+            break;
+            }
+        case 7:// death infected
+            std::discrete_distribution <int> death_infected_dist(
+
+
+        death_rate = Infected[inf_idx].fraction_good * dG + 
+            (1.0 - Infected[inf_idx].fraction_good) * dB;
+
+        death_rate_infected.push_back(death_rate);
+        total_rates[7] += death_rate;
 
         default:
             std::cout << "switch error" << std::endl;

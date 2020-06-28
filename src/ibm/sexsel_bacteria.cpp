@@ -286,7 +286,7 @@ void birth(Individual &parent, bool parent_susceptible)
     return;
 }
 
-// death of a susceptible individual
+// death of randomly chosen a susceptible individual
 void death_susceptible()
 {
     std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
@@ -298,6 +298,13 @@ void death_susceptible()
     assert(Ns >= 0);
     assert(Ns + Ni <= N);
 }// end death_susceptible()
+
+// death of an infected individual at location I_idx
+void death_infected(int const I_idx)
+{
+    Infected[I_idx] = Infected[Ni - I_idx];
+    --Ni;
+}
 
 void loss_plasmid(int const I_idx, bool const plasmid_good)
 {
@@ -338,6 +345,9 @@ void loss_plasmid(int const I_idx, bool const plasmid_good)
     } // end if (plasmid_good)
 
 
+    // from here only bad plasmid loss
+    //
+    //
     assert(Infected[I_idx].nplasmids - Infected[I_idx].nplasmids_good > 0);
 
     for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
@@ -348,7 +358,7 @@ void loss_plasmid(int const I_idx, bool const plasmid_good)
             --Infected[I_idx].nplasmids;
             break;
         }
-    }
+    } // end for
 
     if (Infected[I_idx].nplasmids == 0)
     {
@@ -631,15 +641,21 @@ void event_chooser(int const time_step)
             break;
             }
         case 7:// death infected
+            {
             std::discrete_distribution <int> death_infected_dist(
+                    death_rate_infected.begin()
+                    ,death_rate_infected.end());
+
+            I_idx = death_infected_dist(rng_r);
 
 
-        death_rate = Infected[inf_idx].fraction_good * dG + 
-            (1.0 - Infected[inf_idx].fraction_good) * dB;
+            assert(I_idx >= 0);
+            assert(I_idx < Ni);
+            
+            loss_plasmid(I_idx, false);
 
-        death_rate_infected.push_back(death_rate);
-        total_rates[7] += death_rate;
-
+            death_infected(I_idx);
+            }
         default:
             std::cout << "switch error" << std::endl;
             break;
@@ -665,7 +681,7 @@ int main(int argc, char **argv)
     }
     
     write_parameters(data_file);
-}
+} // end main
 
 
 

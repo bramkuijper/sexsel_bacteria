@@ -73,6 +73,8 @@ double sdmu_x = 0.0;
 // number of timesteps that the simulation should run
 int max_time = 10;
 
+int skip_output_rows = 10;
+
 // individual
 struct Individual
 {
@@ -155,22 +157,23 @@ void init_pop()
 // initialize the parameters through the command line
 void init_arguments(int argc, char ** argv)
 {
-    // call 
+    // obtain all parameters from the command line
     max_time = atof(argv[1]);
     p_good_init = atof(argv[2]);
     kappa = atof(argv[3]);
     bmax = atof(argv[4]);
-    c = atof(argv[4]);
-    gamma_G = atof(argv[5]);
-    gamma_B = atof(argv[6]);
-    psi_G = atof(argv[7]);
-    psi_B = atof(argv[8]);
-    d = atof(argv[9]);
-    dG = atof(argv[10]);
-    dB = atof(argv[11]);
-    sigma = atof(argv[12]);
-    base_name = argv[13];
-
+    c = atof(argv[5]);
+    gamma_G = atof(argv[6]);
+    gamma_B = atof(argv[7]);
+    psi_G = atof(argv[8]);
+    psi_B = atof(argv[9]);
+    d = atof(argv[10]);
+    dG = atof(argv[11]);
+    dB = atof(argv[12]);
+    sigma = atof(argv[13]);
+    mu_x = atof(argv[14]);
+    sdmu_x = atof(argv[15]);
+    base_name = argv[16];
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)
@@ -191,7 +194,9 @@ void write_parameters(std::ofstream &data_file)
         << "sigma" << ";" << sigma << std::endl
         << "kappa" << ";" << kappa << std::endl
         << "seed" << ";" << seed << std::endl
-        << "n_plasmid_init" << ";" << p_good_init << std::endl;
+        << "mu_x" << ";" << mu_x << std::endl
+        << "sdmu_x" << ";" << sdmu_x << std::endl
+        << "n_plasmid_init" << ";" << n_plasmid_init << std::endl;
 
 } // end write_parameters()
 
@@ -299,9 +304,33 @@ void death_susceptible()
     assert(Ns + Ni <= N);
 }// end death_susceptible()
 
+// co infect a host (index I_idx)
+// with another plasmid
+void co_infection(int const I_idx, bool const plasmid_good)
+{
+    // check whether the individual is indeed infected
+    assert(Infected[I_idx].nplasmids > 0);
+    assert(Infected[I_idx].nplasmids <=nplasmid_max);
+    // do nothing if individual already contains max number of
+    // plasmids
+    if (Infected[I_idx].nplasmids == nplasmid_max)
+    {
+        return;
+    }
+
+    // add another plasmid to the stack of plasmids
+    Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids++] = plasmid_good;
+
+    // update the count of good plasmids
+    // if the value of plasmid_good is false, it will add 0
+    Infected[I_idx].nplasmids_good += plasmid_good;
+    Infected[I_idx].fraction_good = (double)Infected[I_idx].nplasmids_good/Infected[I_idx].nplasmids;
+} // end co_infection
+
 // death of an infected individual at location I_idx
 void death_infected(int const I_idx)
 {
+    assert(Infected[I_idx].nplasmids > 0);
     Infected[I_idx] = Infected[Ni - I_idx];
     --Ni;
 }
@@ -379,7 +408,7 @@ void loss_plasmid(int const I_idx, bool const plasmid_good)
 // write headers to the datafile
 void write_data_headers(std::ofstream &data_file)
 {
-    data_file << "time;mean_resistance;Ns;Ni;mean_nplasmid;" << std::endl;
+    data_file << "time;mean_resistance;var_resistance;mean_plasmid_good;var_plasmid_good;Ns;Ni;mean_nplasmid;var_nplasmid;" << std::endl;
 } // end write_data_headers()
 
 // fecundity function accounting for plasmid behaviour
@@ -516,12 +545,18 @@ void event_chooser(int const time_step)
         death_rate_infected.push_back(death_rate);
         total_rates[7] += death_rate;
 
-        // 9. infection with another plasmid
+        // bounds checking. If there is a buffer overflow
+        // these numbers typically are not between bounds
+        assert(Infected[inf_idx].x >= 0.0);
+        assert(Infected[inf_idx].x <= 1.0);
+
+        // 8. infection with a good plasmid
         co_infection_good = sigma * (1.0 - Infected[inf_idx].x) * psi_G;
         infection_rate_infected_good.push_back(co_infection_good);
         
         total_rates[8] += co_infection_good;
 
+        // 9. infection with a bad plasmid
         co_infection_bad = sigma * (1.0 - Infected[inf_idx].x) * psi_B;
         infection_rate_infected_bad.push_back(co_infection_bad);
         
@@ -543,15 +578,28 @@ void event_chooser(int const time_step)
     {
         // next, we now determine the actual individuals
         // affected by the event
+        //
+        // note additional curly braces in switch cases below,
+        // coz https://stackoverflow.com/questions/92396/why-cant-variables-be-declared-in-a-switch-statement 
         
         case 0: // birth of susceptible
             {
+                // set up a probability distribution
+                // that determines which individual will be drawn
+                // to give birth
             std::discrete_distribution <int> birth_susc_distribution(
                     birth_rates_susceptible.begin()
                     ,birth_rates_susceptible.end());
 
+            // then draw from the probability distribution
+            // to determine the individual that gives birth
             S_idx = birth_susc_distribution(rng_r);
 
+            // check whether the number is indeed
+            // conforming to a susceptible
+            //
+            // note that S_idx is an index from 0 to Ns - 1
+            // thus it does not include Ns itself
             assert(S_idx >= 0);
             assert(S_idx < Ns);
 
@@ -563,104 +611,242 @@ void event_chooser(int const time_step)
 
         case 1: // infection of a susceptible by good plasmid
             {
-            std::discrete_distribution <int> infection_susceptible_good_dist(
-                infection_rate_susceptible_good.begin()
-                ,infection_rate_susceptible_good.end());
+                // set up a probability distribution
+                // that determines which individual will get infected
+                // by a good plasmid
+                std::discrete_distribution <int> infection_susceptible_good_dist(
+                    infection_rate_susceptible_good.begin()
+                    ,infection_rate_susceptible_good.end());
 
-            S_idx = infection_susceptible_good_dist(rng_r);
+                // then draw from the probability distribution
+                // to determine the individual that gets infected
+                S_idx = infection_susceptible_good_dist(rng_r);
 
-            assert(S_idx >= 0);
-            assert(S_idx < Ns);
+                // bounds checking
+                assert(S_idx >= 0);
+                assert(S_idx < Ns);
 
-            infection_susceptible(S_idx, true);
+                infection_susceptible(S_idx, true);
 
-            break;
+                break;
             }
         case 2: // infection of a susceptible by a bad plasmid
             {
-            std::discrete_distribution <int> infection_susceptible_bad_dist(
-                infection_rate_susceptible_bad.begin()
-                ,infection_rate_susceptible_bad.end());
+                // set up a probability distribution
+                // that determines which individual will get infected
+                // by a bad plasmid
+                std::discrete_distribution <int> infection_susceptible_bad_dist(
+                    infection_rate_susceptible_bad.begin()
+                    ,infection_rate_susceptible_bad.end());
 
-            S_idx = infection_susceptible_bad_dist(rng_r);
+                // then draw from the probability distribution
+                // to determine the individual that gets infected
+                S_idx = infection_susceptible_bad_dist(rng_r);
 
-            assert(S_idx >= 0);
-            assert(S_idx < Ns);
+                assert(S_idx >= 0);
+                assert(S_idx < Ns);
 
-            infection_susceptible(S_idx, false);
+                infection_susceptible(S_idx, false);
 
-            break;
+                break;
             }
         case 3: // death susceptible
+            // each susceptible has the same chance of dying
+            // so we do not need to set up a probability distribution
+            // determining which susceptible is more likely to die relative
+            // to others, we simply pick a 
+            // random individual
+
+            // as we do not initialize any variables
+            // within a 'case n:' clause
+            // no curly braces needed
             death_susceptible();
             break;
         case 4: // birth infected host
             {
-            std::discrete_distribution <int> birth_infected_dist(
-                birth_rates_infected.begin()
-                ,birth_rates_infected.end());
+                // set up probability distribution that determines
+                // which individual will give birth
+                std::discrete_distribution <int> birth_infected_dist(
+                    birth_rates_infected.begin()
+                    ,birth_rates_infected.end());
 
-            I_idx = birth_infected_dist(rng_r);
+                // draw an individual to give birth from that distribution
+                I_idx = birth_infected_dist(rng_r);
 
-            assert(I_idx >= 0);
-            assert(I_idx < Ni);
+                // bounds checking
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
 
-            birth(Infected[I_idx], false);
+                // perform a birth event
+                birth(Infected[I_idx], false);
+                
+                break;
             }
-            break;
-
         case 5: // loss of a single good plasmid
             {
-            std::discrete_distribution <int> loss_good_plasmid_dist(
-                    loss_rates_good.begin()
-                    ,loss_rates_good.end());
+                // set up probability distribution that determines
+                // which individual will lose a good plasmid
+                std::discrete_distribution <int> loss_good_plasmid_dist(
+                        loss_rates_good.begin()
+                        ,loss_rates_good.end());
 
-            I_idx = loss_good_plasmid_dist(rng_r);
+                // draw an individual from that distribution which is going
+                // to lose a plasmid
+                I_idx = loss_good_plasmid_dist(rng_r);
 
-            assert(I_idx >= 0);
-            assert(I_idx < Ni);
+                // bounds checking
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
+               
+                // perform the actual plasmid loss 
+                loss_plasmid(I_idx, true);
             
-            loss_plasmid(I_idx, true);
-            
-            break;
+                break;
             }
-
         case 6: // loss of a single bad plasmid
             {
-            std::discrete_distribution <int> loss_bad_plasmid_dist(
-                    loss_rates_bad.begin()
-                    ,loss_rates_bad.end());
+                // set up probability distribution that determines
+                // which individual will lose a bad plasmid
+                std::discrete_distribution <int> loss_bad_plasmid_dist(
+                        loss_rates_bad.begin()
+                        ,loss_rates_bad.end());
 
-            I_idx = loss_bad_plasmid_dist(rng_r);
+                // draw an individual from that distribution which is going
+                // to lose a plasmid
+                I_idx = loss_bad_plasmid_dist(rng_r);
 
-            assert(I_idx >= 0);
-            assert(I_idx < Ni);
-            
-            loss_plasmid(I_idx, false);
-            
-            break;
+                // bounds checking
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
+
+                // perform the actual plasmid loss
+                loss_plasmid(I_idx, false);
+                
+                break;
             }
         case 7:// death infected
             {
-            std::discrete_distribution <int> death_infected_dist(
-                    death_rate_infected.begin()
-                    ,death_rate_infected.end());
+                // set up probability distribution that determines
+                // which individual will lose a bad plasmid
+                std::discrete_distribution <int> death_infected_dist(
+                        death_rate_infected.begin()
+                        ,death_rate_infected.end());
 
-            I_idx = death_infected_dist(rng_r);
+                // draw the individual that is going to die from that distribution
+                I_idx = death_infected_dist(rng_r);
 
+                // bounds check
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
+                
+                // perform actual death 
+                death_infected(I_idx);
 
-            assert(I_idx >= 0);
-            assert(I_idx < Ni);
-            
-            loss_plasmid(I_idx, false);
+                break;
+            }
+        case 8: // co-infection good plasmid
+            {
+                //set up probability distribution that determines
+                //which individaul will get co-infected by a good plasmid
+                std::discrete_distribution <int> co_infection_good_dist(
+                    infection_rate_infected_good.begin()
+                    ,infection_rate_infected_good.end());
 
-            death_infected(I_idx);
+                // draw the individual that is going to get co-infected
+                I_idx = co_infection_good_dist(rng_r);
+
+                // bounds check
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
+
+                // perform the actual co-infection
+                co_infection(I_idx, true);
+
+                break;
+            }
+        case 9: // co-infection bad plasmid
+            {
+                //set up probability distribution that determines
+                //which individaul will get co-infected by a good plasmid
+                std::discrete_distribution <int> co_infection_bad_dist(
+                    infection_rate_infected_bad.begin()
+                    ,infection_rate_infected_bad.end());
+
+                // draw the individual that is going to get co-infected
+                I_idx = co_infection_bad_dist(rng_r);
+
+                // bounds check
+                assert(I_idx >= 0);
+                assert(I_idx < Ni);
+
+                // perform the actual co-infection
+                co_infection(I_idx, false);
+
+                break;
             }
         default:
             std::cout << "switch error" << std::endl;
             break;
     } // end switch
 } // end event_chooser(int const time_step)
+
+// write the data
+void write_data(std::ofstream &data_file
+        ,int const time_step)
+{
+    double mean_resistance = 0.0;
+    double ss_resistance = 0.0;
+
+    double mean_freq_plasmid_good = 0.0;
+    double ss_freq_plasmid_good = 0.0;
+
+    double mean_n_plasmid = 0.0;
+    double ss_n_plasmid = 0.0;
+
+    double x,p_good,n_plasmid;
+
+    for (int I_idx = 0; I_idx < Ni; ++I_idx)
+    {
+        x = Infected[I_idx].x;
+
+        mean_resistance += x;
+        ss_resistance += x * x;
+
+        p_good = Infected[I_idx].fraction_good;
+
+        mean_freq_plasmid_good += p_good;
+        ss_freq_plasmid_good += p_good * p_good;
+
+        n_plasmid = Infected[I_idx].nplasmids;
+
+        mean_n_plasmid += n_plasmid;
+        ss_n_plasmid += n_plasmid * n_plasmid;
+    }
+
+    mean_resistance /= Ni;
+    mean_freq_plasmid_good /= Ni;
+    mean_n_plasmid /= Ni;
+
+    double var_resistance = ss_resistance / Ni 
+        - mean_resistance * mean_resistance;
+
+    double var_freq_plasmid_good = ss_freq_plasmid_good / Ni
+        - mean_freq_plasmid_good * mean_freq_plasmid_good;
+
+    double var_n_plasmid = ss_n_plasmid / Ni
+        - mean_n_plasmid * mean_n_plasmid;
+
+    data_file << time_step << ";"
+        << mean_resistance << ";"
+        << var_resistance << ";"
+        << mean_freq_plasmid_good << ";"
+        << var_freq_plasmid_good << ";"
+        << Ns << ";"
+        << Ni << ";"
+        << mean_n_plasmid << ";"
+        << var_n_plasmid << ";" << std::endl;
+
+}
 
 int main(int argc, char **argv)
 {
@@ -669,6 +855,9 @@ int main(int argc, char **argv)
     // initialize file to write data to
     std::string file_name = base_name + ".csv";
     std::ofstream data_file{file_name};
+
+    // start with the parameters and then the data
+    write_parameters(data_file);
     write_data_headers(data_file);
 
     // initialize the population
@@ -678,9 +867,13 @@ int main(int argc, char **argv)
     for (int time_idx = 0; time_idx < max_time; ++time_idx)
     {
         event_chooser(time_idx);
+
+        if (time_idx % skip_output_rows == 0)
+        {
+            write_data(data_file, time_idx);
+        }
     }
     
-    write_parameters(data_file);
 } // end main
 
 

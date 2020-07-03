@@ -6,13 +6,13 @@
 nrep <- 3
 
 # maximum number of times
-max_time <- 100
+max_time <- 1000
 
 # p good init
 p_good_init <- 0.0
 
 # density-dependence parameter
-kappa <- 0.01
+kappa <- 1e-04 
 
 # max fecundity of the host
 bmax <- 50
@@ -42,6 +42,12 @@ sigma <- 0
 mu_x <- 1e-05
 sdmu_x <- 0.01
 
+init_x <- 0.1
+
+# get the directory name of this script
+# we use this so that we can
+script.dir <- dirname(sys.frame(1)$ofile)
+
 # executable
 exe <- "./sexsel_bacteria.exe"
 
@@ -58,11 +64,13 @@ basename <- paste("sim_bact_sexsel_",curr.time.str,sep="")
 
 # the name of the batch file that contains the commmands to 
 # run the simulations
-batch_file_name <- paste("batch_file_",curr.time.str,".sh",sep="")
+batch_file_name <- file.path(script.dir,paste("batch_file_",curr.time.str,".sh",sep=""))
+
+print(paste("printing batch file ",batch_file_name))
 
 # a file that summarizes the parameters that were varied
 # just for the sake of bookkeeping
-record_file_name <- paste("batch_record_",curr.time.str,".txt",sep="")
+record_file_name <- file.path(script.dir,paste("batch_record_",curr.time.str,".txt",sep=""))
 
 # obtain all combinations by doing expand.grid()
 # which calculates all combinations of factors
@@ -88,6 +96,7 @@ combinations <- as.data.frame(
                 ,sigma=sigma
                 ,mu_x=mu_x
                 ,sdmu_x=sdmu_x
+                ,init_x=init_x
                 ,stringsAsFactors=F
                 ))
 
@@ -176,6 +185,7 @@ summarize.params(
                 ,sigma=sigma
                 ,mu_x=mu_x
                 ,sdmu_x=sdmu_x
+                ,init_x=init_x
                 )
 #
 #

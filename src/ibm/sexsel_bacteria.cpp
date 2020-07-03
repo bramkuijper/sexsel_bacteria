@@ -173,7 +173,8 @@ void init_arguments(int argc, char ** argv)
     sigma = atof(argv[13]);
     mu_x = atof(argv[14]);
     sdmu_x = atof(argv[15]);
-    base_name = argv[16];
+    init_x = atof(argv[16]);
+    base_name = argv[17];
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)
@@ -196,6 +197,7 @@ void write_parameters(std::ofstream &data_file)
         << "seed" << ";" << seed << std::endl
         << "mu_x" << ";" << mu_x << std::endl
         << "sdmu_x" << ";" << sdmu_x << std::endl
+        << "init_x" << ";" << init_x << std::endl
         << "n_plasmid_init" << ";" << n_plasmid_init << std::endl;
 
 } // end write_parameters()

@@ -14,7 +14,7 @@
 
 // C++ random number generation unsigned int seed = get_nanoseconds();
 std::random_device rd;
-unsigned seed = rd();
+unsigned seed = 280527094;//rd();
 std::mt19937 rng_r{seed};
 std::uniform_real_distribution<> uniform(0.0,1.0);
 
@@ -258,10 +258,14 @@ void birth(Individual &parent, bool parent_susceptible)
 {
     Individual kid;
 
+    assert(parent.x >= 0);
+    assert(parent.x <= 1.0);
+
     // mutate the resistance allele
     kid.x = mutation(parent.x);
 
-    std::clamp(kid.x, 0.0, 1.0);
+    // limit boundaries of resistance
+    kid.x = std::clamp(kid.x, 0.0, 1.0);
 
     kid.nplasmids = 0;
     kid.nplasmids_good = 0;
@@ -299,6 +303,9 @@ void death_susceptible()
     std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
 
     int random_susceptible = susceptible_sampler(rng_r);
+
+    assert(random_susceptible >= 0);
+    assert(random_susceptible < Ns);
     Susceptible[random_susceptible] = Susceptible[Ns - 1];
     --Ns;
 
@@ -332,14 +339,19 @@ void co_infection(int const I_idx, bool const plasmid_good)
 // death of an infected individual at location I_idx
 void death_infected(int const I_idx)
 {
+    assert(I_idx >= 0);
+    assert(I_idx < Ni);
+
     assert(Infected[I_idx].nplasmids > 0);
-    Infected[I_idx] = Infected[Ni - I_idx];
+    Infected[I_idx] = Infected[Ni - 1];
     --Ni;
 }
 
 void loss_plasmid(int const I_idx, bool const plasmid_good)
 {
     assert(Infected[I_idx].nplasmids > 0);
+    assert(I_idx >= 0);
+    assert(I_idx < Ni);
 
     if (plasmid_good)
     {
@@ -482,12 +494,26 @@ void event_chooser(int const time_step)
     double cumul_loss_rate_good = 0.0;
     double cumul_loss_rate_bad = 0.0;
 
+    if (Ns == 0 && Ni == 0)
+    {
+        exit(1);
+    }
+
     // go through all susceptibles and calculate birth
     // and infection rates
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
+        
+        if (Susceptible[S_idx].x < 0.0)
+        {
+            std::cout << "time: " << time_step << " Ns: " << Ns << " inf_idx: " << S_idx << " " << Susceptible[S_idx].x << std::endl;
+        }
+
+        assert(Susceptible[S_idx].x >= 0);
+        assert(Susceptible[S_idx].x <= 1.0);
+
         // 0. Birth of susceptibles
-        rate_birth = b(Susceptible[S_idx].x) * (1.0 - kappa * N);
+        rate_birth = b(Susceptible[S_idx].x) * (1.0 - kappa * (Ns + Ni));
         birth_rates_susceptible.push_back(rate_birth);
 
         total_rates[0] += rate_birth;
@@ -507,7 +533,7 @@ void event_chooser(int const time_step)
         infection_rate_susceptible_bad.push_back(rate_infect);
         
         total_rates[2] += rate_infect;
-    }
+    } // end for S_idx
 
     // 3. Deaths susceptibles
     double death_rate_S = Ns * d;
@@ -519,9 +545,20 @@ void event_chooser(int const time_step)
     // now go through the infected hosts 
     for (int inf_idx = 0; inf_idx < Ni; ++inf_idx)
     {
+        // bounds checking. If there is a buffer overflow
+        // these numbers typically are not between bounds
+        assert(Infected[inf_idx].x >= 0.0);
+        assert(Infected[inf_idx].x <= 1.0);
+        
+        if (Infected[inf_idx].x < 0.0)
+        {
+            std::cout << "time: " << time_step << " Ni: " << Ni << " inf_idx: " << inf_idx << " " << Infected[inf_idx].x << std::endl;
+        }
+
+
         // 4. birth infected host
         rate_birth = F(Infected[inf_idx].fraction_good) * 
-            b(Infected[inf_idx].x) * (1.0 - kappa * N);
+            b(Infected[inf_idx].x) * (1.0 - kappa * (Ns + Ni));
         
         birth_rates_infected.push_back(rate_birth);
 
@@ -547,11 +584,6 @@ void event_chooser(int const time_step)
         death_rate_infected.push_back(death_rate);
         total_rates[7] += death_rate;
 
-        // bounds checking. If there is a buffer overflow
-        // these numbers typically are not between bounds
-        assert(Infected[inf_idx].x >= 0.0);
-        assert(Infected[inf_idx].x <= 1.0);
-
         // 8. infection with a good plasmid
         co_infection_good = sigma * (1.0 - Infected[inf_idx].x) * psi_G;
         infection_rate_infected_good.push_back(co_infection_good);
@@ -563,7 +595,9 @@ void event_chooser(int const time_step)
         infection_rate_infected_bad.push_back(co_infection_bad);
         
         total_rates[9] += co_infection_bad;
-    } 
+    }
+
+    assert(infection_rate_infected_bad.size() == Ni);
 
     // done, now determine what to do by making a weighted distribution
     // this will return a number between 0 and n_events - 1
@@ -586,6 +620,7 @@ void event_chooser(int const time_step)
         
         case 0: // birth of susceptible
             {
+                assert(birth_rates_susceptible.size() == Ns);
                 // set up a probability distribution
                 // that determines which individual will be drawn
                 // to give birth
@@ -613,6 +648,7 @@ void event_chooser(int const time_step)
 
         case 1: // infection of a susceptible by good plasmid
             {
+                assert(infection_rate_susceptible_good.size() == Ns);
                 // set up a probability distribution
                 // that determines which individual will get infected
                 // by a good plasmid
@@ -776,6 +812,11 @@ void event_chooser(int const time_step)
 
                 // draw the individual that is going to get co-infected
                 I_idx = co_infection_bad_dist(rng_r);
+
+                if (I_idx >= Ni)
+                {
+                    std::cout << I_idx << std::endl;
+                }
 
                 // bounds check
                 assert(I_idx >= 0);

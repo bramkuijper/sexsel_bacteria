@@ -3,10 +3,10 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 3
+nrep <- 1
 
 # maximum number of times
-max_time <- 1000
+max_time <- 1000000
 
 # p good init
 p_good_init <- 0.0
@@ -39,8 +39,8 @@ dG <- 1 # infected with good
 sigma <- 0
 
 # mutation rate
-mu_x <- 1e-05
-sdmu_x <- 0.01
+mu_x <- 0.01
+sdmu_x <- 0.5
 
 init_x <- 0.1
 

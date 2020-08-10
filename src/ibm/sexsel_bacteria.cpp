@@ -14,7 +14,7 @@
 
 // C++ random number generation unsigned int seed = get_nanoseconds();
 std::random_device rd;
-unsigned seed = 280527094;//rd();
+unsigned seed = rd();
 std::mt19937 rng_r{seed};
 std::uniform_real_distribution<> uniform(0.0,1.0);
 

@@ -1,5 +1,6 @@
-// sexual selection in bactiera
+// sexual selection in bacteria
 
+// initial model based on plasmid model by Gandon & Vale
 #include <iostream>
 #include <cstdlib>
 #include <fstream>

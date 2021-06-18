@@ -35,15 +35,22 @@ bool init_t = 0;
 // frequency of p2 and t2 in the population
 double freq_p2 = 0.0;
 double freq_t2 = 0.0;
+
 // population size
 int const N = 10000;
 
 int const nplasmid_max = 1;
 
-// initial frequency of uninfected (no plasmid)
+// number of timesteps that the simulation should run
+int max_time = 10;
+
+int skip_output_rows = 10;
+
 // initial number of plasmids in infected cells
-double p_noplasmid_init = 1;
 double n_plasmid_init = 1;
+
+// initial frequency of uninfected (no plasmid)
+double p_noplasmid_init = 1;
 
 // density dependence
 double kappa = 1;
@@ -53,13 +60,14 @@ double bmax = 1;
 
 // preference for t == 1
 double alpha = 0.0;
+
 // preference cost factor 
 // trait cost factor
-double c = 1;
-double epsilon = 1;
+double c = 0.0;
+double epsilon = 0.0;
 
 //cost of having plasmid
-double delta = 1;
+double delta = 0.0;
 
 // loss rate of plasmid
 double gamma = 0.0;
@@ -87,14 +95,15 @@ double mu_p = 0.0;
 // the rate at which t1 turns to t2 and vice-versa
 double mu_t = 0.0;
 
-// number of timesteps that the simulation should run
-int max_time = 10;
-
-int skip_output_rows = 10;
+// dominance coefficient 
+// 0 = recessive, 0.5 = additive, 1 = dominant
+double h = 0.0;  // for preference
+double l = 0.0;  //for trait
 
 // individual
 struct Individual
 {
+    // genotype	
     //preference in chromosome 
     //trait in chromosome
     bool p_chr;
@@ -104,6 +113,10 @@ struct Individual
     //trait in plasmid
     bool p_plasmid;
     bool t_plasmid;
+
+    // phenotype  ===> do I really need this? 
+    double p_phen;
+    double t_phen;
     
     // list of plasmids
     // note that we allow potentially for 
@@ -125,12 +138,72 @@ typedef Individual Population[N];
 Population Susceptible;
 Population Infected;
 
-
 // number of infected and susceptible hosts
 //
-int Ni = 100;   // consider changing to proportion of N which is infected, as per initial parameters
-int Ns = N - Ni;
+int Ns = round(N/p_noplasmid_init);  
+int Ni = N - Ns;
 
+// vector of attractiveness for individuals with homozygote preference 
+// vector of attractiveness for individuals with heterozygote preference 
+std::vector <double> attract_homozygote;
+std::vector <double> attract_heterozygote;
+// for susceptible and infected
+
+std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
+std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
+
+// calculate attractiveness of Infected individual
+// for a putative homozygote with preference
+double calc_attract_homozygote(int const Donor_idx)
+{
+    assert(Infected[Donor_idx].nplasmids > 0)
+    // check if infected has trait
+	   // and susceptible has preference
+    bool hastrait = Infected[Donor_idx].t_pl || Infected[Donor_idx].t_chr;
+    double l_current; // trait dominance coeff 
+
+    // if infected has trait
+    // calculate its attractiveness
+    if(hastrait)
+    {	
+	    // if heterozygous, use parameter dominance coefficient
+	if(Infected[Donor_idx].t_pl != Infected[Donor_idx].t_chr)
+	{
+	    l_current = l;
+	}
+	else l_current = 1;
+	
+	// return attractiveness - alpha times the dominance coeff
+	return(1 + l_current * alpha);
+    }
+    else return(1);
+	  
+} // end calc_attractiveness
+
+// calculate attractiveness of Infected with trait  
+// for a putative heterozygote with preference (must be Infected if hetero)  
+double calc_attract_heterozygote(int const Donor_idx)
+{
+    assert(Infected[Donor_idx].nplasmids > 0)
+    // check if infected has trait
+    bool hastrait = Infected[Donor_idx].t_pl || Infected[Donor_idx].t_chr;
+    double l_current; // trait dominance coeff 
+
+    if(hastrait)
+    {	
+	    // if donor heterozygous, use parameter dominance coefficient
+	if(Infected[Donor_idx].t_pl != Infected[Donor_idx].t_chr)
+	{
+	    l_current = l;
+	}
+	else l_current = 1;
+	
+	// return attractiveness - alpha times the dominance coeff
+	return(1 + h * l_current * alpha);
+    }
+    else return(1);
+	  
+} // end calc_attractiveness
 
 // initialize population
 void init_pop()
@@ -142,19 +215,77 @@ void init_pop()
         Susceptible[S_idx].p_chr = init_p;
         Susceptible[S_idx].t_chr = init_t;
         Susceptible[S_idx].nplasmids = 0;
+        Susceptible[S_idx].plasmid[0] = false;
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 
     // initialize infected individuals
-    for (int I_idx = 0; I_idx < Ni; ++I_idx)
+    for (int I_dx = 0; I_idx < Ni; ++I_idx)
     {
         Infected[I_idx].p_chr = init_p;
         Infected[I_idx].t_chr = init_t;
         Infected[I_idx].p_plasmid = init_p;
         Infected[I_idx].t_plasmid = init_t;
         Infected[I_idx].nplasmids = n_plasmid_init;
+        Infected[I_idx].plasmid[0] = true;
+	attract_homozygote.push_back(calc_attract_homozygote(I_idx));
+	attract_heterozygote.push_back(calc_attract_heterozygote(I_idx));
 
     }
-}//end void 
+   
+    assert(attract_homozygote.size() == Ni); 
+    assert(attract_heterozygote.size() == Ni); 
+    
+}//end void init_pop() 
+
+// updating attractiveness vectors for birth/death events
+
+// update attractiveness vectors when individual is dead
+// only Infected individuals, Susceptible do not act as donors 
+// hence have no attractiveness
+void update_death_attract(int const dead_idx)  
+{
+    // update in the same way as dead individuals are updated in population
+    // copy last individual on the stack over dead individual
+    // then remove last element of vector
+// this needs to happen before actual removal/addition of individuals
+// to population stack
+// hence, when asserting vector sizes we must account for the individual we just added/removed
+// as population sizes will be updated after updating attractiveness 
+    attract_homozygote[dead_idx] = attract_homozygote.back();
+    attract_homozygote.pop_back();	   
+    assert(attract_homozygote.size() == Ni - 1;
+
+    attract_heterozygote[dead_idx] = attract_heterozygote.back();
+    attract_heterozygote.pop_back();	   
+    assert(attract_heterozygote.size() == Ni - 1;
+}
+
+// update attractiveness vectors when 
+// infected individual reproduces 
+// or a susceptible is newly infected  
+void update_birth_attract(int const new_idx)  
+{
+    // birth/creation of an infected individual
+    // update in the same way as births are updated in population
+    // add new individual to end of attractiveness vector 
+    attract_homozygote.push_back(calc_attract_homozygote(new_idx));
+    attract_heterozygote.push_back(calc_attract_heterozygote(new_idx));
+    assert(attract_homozygote.size() == Ni);
+    assert(attract_heterozygote.size() == Ni);
+}
+
+    // conjugation between two infected individuals
+void update_conj_attract(int const receiver_idx)  
+{
+    // recalculate individual's attraction value 
+    // for putative homozygote and putative heterozygote 
+    attract_homozygote[receiver_idx] = calc_attract_homozygote(receiver_idx);
+    attract_heterozygote[receiver_idx] = calc_attract_heterozygote(receiver_idx);
+
+    assert(attract_homozygote.size() == Ni);
+    assert(attract_heterozygote.size() == Ni); 
+     
+} // end of update_conj_attract
 
 // initialize the parameters through the command line
 void init_arguments(int argc, char ** argv)
@@ -179,7 +310,9 @@ void init_arguments(int argc, char ** argv)
     init_t = atof(argv[17]);
     base_name = argv[18];
     alpha = atof(argv[19]);
-
+    h = atof(argv[20]);
+    l = atof(argv[21]);
+    
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)
@@ -191,6 +324,7 @@ void write_parameters(std::ofstream &data_file)
         << "kappa" << ";" << kappa << std::endl
         << "bmax" << ";" << bmax << std::endl
         << "c" << ";" << c << std::endl
+        << "alpha" << ";" << alpha << std::endl
 	<< "epsilon" << ";" << epsilon << std::endl
         << "delta" << ";" << delta << std::endl
         << "gamma" << ";" << gamma << std::endl
@@ -201,124 +335,271 @@ void write_parameters(std::ofstream &data_file)
         << "r" << ";" << r << std::endl
         << "seed" << ";" << seed << std::endl
         << "mu_p" << ";" << mu_p << std::endl
-        << "sdmu_p" << ";" << sdmu_p << std::endl
         << "mu_t" << ";" << mu_t << std::endl
-        << "sdmu_t" << ";" << sdmu_t << std::endl
         << "init_p" << ";" << init_p << std::endl
         << "init_t" << ";" << init_t << std::endl
-        << "n_plasmid_init" << ";" << n_plasmid_init << std::endl;
+        << "n_plasmid_init" << ";" << n_plasmid_init << std::endl
+	<< "h" << ";" << h << std::endl
+	<< "l" << ";" << l << std:endl;
 
 } // end write_parameters()
 
-double mutation(double const x)
+
+// if mutation occurs 
+// turn allele p1 into p2 and vice-versa
+// same for trait locus
+double mutation(double const mu, bool const allele)
 {
-    if (uniform(rng_r) < mu_x)
+    if (uniform(rng_r) < mu)
     {
-        std::normal_distribution <double> distribution(0.0,sdmu_x);
-        return(x + distribution(rng_r));
+	allele = !allele;
+        return(allele);
     }
 
-    return(x);
+    return(allele);
 }
 
 // infection event of a susceptible 
 // by conjugation with infected individual 
-void infection_susceptible(
-        int const S_idx
-        ,bool has_plasmid, int const I_idx)
+void infection_susceptible(int const S_idx)
 {
     assert(S_idx >= 0);
     assert(S_idx < Ns);
+    
+    // check indeed that the susceptible individual
+    // is not infected
+    assert(Susceptible[S_idx].nplasmids == 0);
+
+    int I_idx;
+    // CHOOSING AN INFECTED INDIVIDUAL
+    // if susceptible has no preference
+    // choose an infected individual randomly 
+    if(!Susceptible[S_idx].p_chr)  
+    {
+	I_idx = infected_sampler(rng_r)
+    }
+
+    // if susceptible has preference
+    // generate weighted distribution with attractiveness values
+    // of infected individuals
+    // for a putative homozygote
+    if(Susceptible[S_idx].p_chr)
+    {
+        std::discrete_distribution <int> infected_attract_dist(attract_homozygote.begin(), attract_homozygote.end());
+	I_idx = infected_attract_dist(rng_r);
+    }
 
     assert(I_idx >= 0);
     assert(I_idx < Ni);
 
-    // check indeed that the susceptible individual
-    // is not infected
-    // and the infected IS infected
-    assert(Susceptible[S_idx].nplasmids == 0);
-    assert(Infected[I_idx].nplasmids == 1);
+    // assert the infected IS infected
 
-    //copy plasmid genotype of infected to susceptible cell
-    Susceptible[S_idx].p_plasmid = Infected[I_idx].p_plasmid;
-    Susceptible[S_idx].t_plasmid = Infected[I_idx].t_plasmid;
+    assert(Infected[I_idx].nplasmids >= 1);
 
-    // assign newly infected to stack of infected
+    // and assign newly infected to stack of infected
     // individuals
 
     Infected[Ni] = Susceptible[S_idx];
 
-    // update plasmids
-    Infected[Ni].nplasmids = 1;
-
-    //update boolean and count of plasmids -- keeping this in case it's useful 
-    Infected[Ni].plasmid[0] = has_plasmid;
-    Infected[Ni].nplasmid_count = +1;
-
-    ++Ni;
-
-    // remove old susceptible (now infected)
+    // remove old susceptible 
     // by overwriting it with the susceptible
     // at the end of the stack of susceptibles
     Susceptible[S_idx] = Susceptible[Ns - 1];
     --Ns;
 
+    //copy plasmid genotype of donor to receiver cell
+    Infected[Ni].p_plasmid = Infected[I_idx].p_plasmid;
+    Infected[Ni].t_plasmid = Infected[I_idx].t_plasmid;
+
+    // update plasmids
+    Infected[Ni].nplasmids = 1;
+
+    //update boolean and count of plasmids -- keeping this in case it's useful 
+    Infected[Ni].plasmid[0] = 1;  // this works because the newly infected cell had no plasmids before
+    ++Infected[Ni].nplasmids; 
+     
+    ++Ni;
+    //update attractiveness vectors
+    // there's a new infected in town!
+    update_birth_attract(Ni - 1)
+
     // check whether population is still within bounds
     // with density dependence this should always be the case
     assert(Ni + Ns <= N);
-}
+} //end infection_susceptible()
 
+// this will need to be changed if we allow more than 1 plasmid per cell 
+void conjugation_infected(int const Receive_idx)
+{
+    assert(Receive_idx >= 0);
+    assert(Receive_idx < Ni);
+
+    // check indeed that both infected 
+    assert(Infected[Receiver_idx].nplasmids >= 1);
+
+    int Donor_idx;
+    // if infected has no preference
+    // pick a random infected individual 
+    // as Donor
+    bool haspref = Infected[Receive_idx].p_pl || Infected[Receive_idx].p_chr;
+
+    if(!haspref)
+    {
+	do Donor_idx = infected_sampler(rng_r);
+	while (Donor_idx == Receiver_idx);
+    }
+	    
+    // if infected has preference
+    // make weighted distribution for 
+    // homozygote preference
+    // or
+    // heterozygote preference
+    // and sample from that distribution
+    if(haspref)
+    {
+	if(Infected[Receive_idx].p_pl == Infected[Receive_idx].p_chr)	
+	{
+            std::discrete_distribution <int> infected_attract_dist(attract_homozygote.begin(), attract_homozygote.end());
+	    Donor_idx = infected_attract_dist(rng_r);
+	}
+	else 
+	{
+            std::discrete_distribution <int> infected_attract_dist(attract_heterozygote.begin(), attract_heterozygote.end());
+	    Donor_idx = infected_attract_dist(rng_r);
+	}	
+    }
+
+    assert(Infected[Donor_idx].nplasmids >= 1);
+
+    // no change in plasmid numbers because 
+    // receiver keeps only one plasmid (random choice
+    // and donor is giving a copy of plasmid
+    // so keeps a copy for themselves 
+
+/* Is there recombination between plasmids before one plasmid chucked out?
+*/
+    // receiver keeps one plasmid - random choice
+    if (uniform(rng_r) < 0.5) 
+    	{
+    	Infected[Receive_idx].p_plasmid = Infected[Donor_idx].p_plasmid;
+    	Infected[Receive_idx].t_plasmid = Infected[Donor_idx].t_plasmid;
+	}
+    //update attractiveness vectors 
+    update_conj_attract(Receive_idx);
+    // check whether population is still within bounds
+    // with density dependence this should always be the case
+    assert(Ni + Ns <= N);
+} // end of conjugation_infected()
+
+void loss_plasmid(int const I_idx)
+{
+    assert(Infected[I_idx].nplasmids > 0);
+    assert(I_idx >= 0);
+    assert(I_idx < Ni);
+
+    // if we want to have more than 1 plasmid, this bit of code needs the for loop
+//    for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
+//    {
+		    // copy the last plasmid on the stack over the plasmid that's getting lost
+		    // then remove the last plasmid on the stack
+    Infected[I_idx].plasmid[0] = false;
+
+    --Infected[I_idx].nplasmids;
+
+//    }
+
+	// if no plasmids left, add the individual
+	// to the end of the Susceptible stack
+	// and write over its place in the infected stack
+	// with the last individual in the Infected stack
+    if (Infected[I_idx].nplasmids == 0)
+    {
+        Susceptible[Ns++] = Infected[I_idx];
+
+	//an infected individual is lost
+	//update attraction vectors
+	update_death_attract(I_idx);
+
+        Infected[I_idx] = Infected[Ni - 1];
+    	--Ni;
+    }
+
+}// end loss_plasmid()
+
+// recombination between plasmid and chromosome alleles
+void recombination(Individual &ind)
+{
+    assert(ind.nplasmid >=1)
+    Individual old_ind = ind;
+
+    if(uniform(rng_r) < r)
+    {
+        ind.p_pl = old_ind.p_chr;
+        ind.p_chr = old_ind.p_pl;
+    }
+
+    if(uniform(rng_r) < r)
+    {
+        ind.t_pl = old_ind.t_chr;
+        ind.t_chr = old_ind.t_pl;
+    }
+}// end void recombination()
 
 // birth event of an individual
 // is going to be different with 
 void birth(Individual &parent, bool parent_susceptible)
 {
     Individual kid;
+    int idx_kid;
 
-    assert(parent.x >= 0);
-    assert(parent.x <= 1.0);
+    assert(parent.p_chr == 0 || parent.p_chr ==1);
+    assert(parent.t_chr == 0 || parent.t_chr == 1);
+    assert(parent.p_plasmid == 0 || parent.p_plasmid ==1);
+    assert(parent.t_plasmid == 0 || parent.t_plasmid == 1);
 
-    // mutate the resistance allele
-    kid.x = mutation(parent.x);
-
-    // limit boundaries of resistance
-    kid.x = std::clamp(kid.x, 0.0, 1.0);
-
-    kid.nplasmids = 0;
-    kid.nplasmids_good = 0;
-    kid.fraction_good = 0;
-
-    if (parent_susceptible)
-    {
-        Susceptible[Ns++] = kid;
-        assert(Ns + Ni <= N);
-        return;
-    }
+    // mutate the preference and trait alleles
+    // in the chromosome
+    kid.p_chr = mutation(mu_p, parent.p_chr);
+    kid.t_chr = mutation(mu_t, parent.t_chr);
 
     // for now assuming strict inheritance
     // later on we might want to introduce segregational effects
-    kid.nplasmids = parent.nplasmids;
+    kid.nplasmids = 0;
+
+    if (parent_susceptible)
+        {
+        Susceptible[Ns++] = kid;
+        assert(Susceptible.size() == Ns);
+        assert(Ns + Ni <= N);
+        return; 
+        }
 
     // birth of infected individual
-    for (int plasmid_idx = 0; plasmid_idx < parent.nplasmids; ++plasmid_idx)
-    {
-        // replicate plasmid to offspring
-        kid.plasmid_good[plasmid_idx] = parent.plasmid_good[plasmid_idx];
-        kid.nplasmids_good += kid.plasmid_good[plasmid_idx];
-    }
+    if (!parent_susceptible) 
+	{
+	for (int plasmid_idx = 0; plasmid_idx < parent.nplasmids; ++plasmid_idx)
+	    {
+	    // replicate plasmid to offspring
+            kid.plasmid[plasmid_idx] = parent.plasmid[plasmid_idx];
+	    kid.nplasmids += kid.plasmid[plasmid_idx]; 
+	    recombination(kid);
+	    }
 
-    kid.fraction_good = (double)kid.nplasmids_good/kid.nplasmids;
+        Infected[Ni++] = kid; 
+	idx_kid = Ni - 1;
+	update_birth_attract(idx_kid) 
+        
+	//bounds checking
+        assert(Infected.size() == Ni);
+        assert(Ns + Ni <= N);
+        return;
+	} // end if (!parent_susceptible)
 
-    Infected[Ni++] = kid;
+} // end of birth()
 
-    return;
-}
-
-// death of randomly chosen a susceptible individual
+// death of susceptible individual
 void death_susceptible()
 {
-    std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
-
     int random_susceptible = susceptible_sampler(rng_r);
 
     assert(random_susceptible >= 0);
@@ -330,9 +611,31 @@ void death_susceptible()
     assert(Ns + Ni <= N);
 }// end death_susceptible()
 
+// in this model the death rate for susceptible 
+// and infected individuals is the same
+void death_infected(int const I_idx)
+{
+    int random_infected = infected_sampler(rng_r);
+
+    assert(Infected[I_idx].nplasmids > 0);
+    assert(random_infected >= 0);
+    assert(random_infected < Ni);
+    update_death_attract(random_infected);
+    Infected[random_infected] = Infected[Ni - 1];
+    --Ni;
+
+    assert(Ni >= 0);
+    assert(Ns + Ni <= N);
+}
+
+/* Leaving this here for now
+ * we will need it when we allow 
+ * for more than one plasmid to co-exist in a cell
+ */
+
 // co infect a host (index I_idx)
 // with another plasmid
-void co_infection(int const I_idx, bool const plasmid_good)
+void co_infection(int const I_idx, bool const plasmid)
 {
     // check whether the individual is indeed infected
     assert(Infected[I_idx].nplasmids > 0);
@@ -345,130 +648,66 @@ void co_infection(int const I_idx, bool const plasmid_good)
     }
 
     // add another plasmid to the stack of plasmids
-    Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids++] = plasmid_good;
+    Infected[I_idx].plasmid[Infected[I_idx].nplasmids++] = plasmid;
 
     // update the count of good plasmids
     // if the value of plasmid_good is false, it will add 0
-    Infected[I_idx].nplasmids_good += plasmid_good;
-    Infected[I_idx].fraction_good = (double)Infected[I_idx].nplasmids_good/Infected[I_idx].nplasmids;
+    Infected[I_idx].nplasmids += plasmid;
+
 } // end co_infection
 
+
 // death of an infected individual at location I_idx
-void death_infected(int const I_idx)
-{
-    assert(I_idx >= 0);
-    assert(I_idx < Ni);
-
-    assert(Infected[I_idx].nplasmids > 0);
-    Infected[I_idx] = Infected[Ni - 1];
-    --Ni;
-}
-
-void loss_plasmid(int const I_idx, bool const plasmid_good)
-{
-    assert(Infected[I_idx].nplasmids > 0);
-    assert(I_idx >= 0);
-    assert(I_idx < Ni);
-
-    if (plasmid_good)
-    {
-        assert(Infected[I_idx].nplasmids_good > 0);
-
-        for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
-        {
-            if (Infected[I_idx].plasmid_good[plasmid_idx])
-            {
-                Infected[I_idx].plasmid_good[plasmid_idx] = 
-                    Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids - 1];
-
-                --Infected[I_idx].nplasmids;
-                --Infected[I_idx].nplasmids_good;
-                break;
-            }
-        }
-
-        if (Infected[I_idx].nplasmids == 0)
-        {
-            Susceptible[Ns++] = Infected[I_idx];
-
-            //
-            Infected[I_idx] = Infected[Ni - 1];
-            --Ni;
-        }
-        else
-        {
-            Infected[I_idx].fraction_good  = (double) Infected[I_idx].nplasmids_good / 
-                    Infected[I_idx].nplasmids;
-        }
-
-        return;
-    } // end if (plasmid_good)
-
-
-    // from here only bad plasmid loss
-    //
-    //
-    assert(Infected[I_idx].nplasmids - Infected[I_idx].nplasmids_good > 0);
-
-    for (int plasmid_idx = 0; plasmid_idx < Infected[I_idx].nplasmids; ++plasmid_idx)
-    {
-        if (!Infected[I_idx].plasmid_good[plasmid_idx])
-        {
-            Infected[I_idx].plasmid_good[plasmid_idx] = Infected[I_idx].plasmid_good[Infected[I_idx].nplasmids - 1];
-            --Infected[I_idx].nplasmids;
-            break;
-        }
-    } // end for
-
-    if (Infected[I_idx].nplasmids == 0)
-    {
-        Susceptible[Ns++] = Infected[I_idx];
-
-        // delete infected individual
-        Infected[I_idx] = Infected[Ni - 1];
-        --Ni;
-    }
-    else
-    {
-        Infected[I_idx].fraction_good  = (double) Infected[I_idx].nplasmids_good / 
-                Infected[I_idx].nplasmids;
-    }
-    return;
-}// end loss_plasmid()
 
 // write headers to the datafile
 void write_data_headers(std::ofstream &data_file)
 {
-    data_file << "time;mean_resistance;var_resistance;mean_plasmid_good;var_plasmid_good;Ns;Ni;mean_nplasmid;var_nplasmid;" << std::endl;
+    data_file << "time;Ns;Ni;freq_p2_all;freq_p2_infected;freq_p2_plasmid;freq_t2_all;freq_t2_infected;freq_t2_plasmid;var_p2_all;var_p2_infected;var_p2_plasmid;var_t2_all;var_t2_infected;var_t2_plasmid;mean_nplasmid;var_nplasmid;" << std::endl;
 } // end write_data_headers()
 
-// fecundity function accounting for plasmid behaviour
-// (good vs bad)
-double F(double const fraction_good)
+// fecundity function that accounts for costly trait and preference,
+// as in Gandon & Vale eq (2)
+double b_Susceptible(bool const trait, bool const pref)
 {
-    // this should be something else, but now it is just
-    // fraction good, i.e, linear decline
-    return(fraction_good);
+    return(bmax * exp(- c * pref - epsilon * trait - delta * plasmid));
 }
 
-// fecundity function that accounts for costly resistance,
-// as in Gandon & Vale eq (2)
-double b(double const resistance)
+double b_Infected(bool const trait_pl, bool const pref_pl, bool const trait_chr, bool const pref_chr)
 {
-    return(bmax * exp(-c * resistance));
-}
+   // check if individual has trait
+   // and preference
+    bool hastrait = trait_pl || trait_chr;
+    bool haspref = pref_pl || pref_chr;
+   
+   // should the trait or preference be 
+   // multiplied by global variables for dominance coefficient? 
+    double l_calc; // trait dominance coeff 
+    double h_calc; // pref dominance coeff 
+
+    if(trait_pl != trait_chr)
+        {
+	    l_calc = l;
+        }
+     else l_calc = 1;
+
+    if(pref_pl != pref_chr)
+        {
+	    h_calc = h;
+        }
+    else h_calc = 1;
+
+    return(bmax * exp(- c * h_calc * haspref - epsilon * l_calc * hastrait - delta));
+} // end of b_Infected()
 
 // calculate the odds of a plasmid loss event
-// and return this is in gamma val
-// also determine whether this is a loss of a 
-// good or a bad plasmid and return this in 
-// loss_good
-void gamma_loss(double &gamma_good, double &gamma_bad, Individual &host)
+// and change loss_rate accordingly
+// it will be equal to gamma while there's only 1 plasmid / individual
+void gamma_loss(double &loss_rate, Individual &host)
 {
-    assert(host.nplasmids_good <= host.nplasmids);
+    assert(host.nplasmids <= nplasmid_max);
+    assert(host.nplasmids > 0);
 
-    gamma_good = host.nplasmids_good * gamma_G;
-    gamma_bad = (host.nplasmids - host.nplasmids_good) * gamma_B;
+    loss_rate = host.nplasmids * gamma;
 }
 
 // setup a distribution of events and choose
@@ -476,7 +715,7 @@ void gamma_loss(double &gamma_good, double &gamma_bad, Individual &host)
 void event_chooser(int const time_step)
 {
     // some auxiliary variables to store temporary values about rates
-    double rate_birth, rate_loss_good, rate_loss_bad, rate_infect;
+    double rate_birth, rate_loss, rate_infect, conjugation_rate, death_rate_S, death_rate_I ;
 
     // make a vector of total rates 
     // (these are the sums of all the individual 
@@ -492,24 +731,9 @@ void event_chooser(int const time_step)
     std::vector <double> birth_rates_susceptible;
     std::vector <double> birth_rates_infected;
 
-    // declare vectors containing infection rates of susceptibles
-    // with good and bad plasmids respectively
-    std::vector <double> infection_rate_susceptible_good;
-    std::vector <double> infection_rate_susceptible_bad;
-    
-    // same for infected (aka rates as co-infection)
-    std::vector <double> infection_rate_infected_good;
-    std::vector <double> infection_rate_infected_bad;
-
     // declare vectors containing rates of
-    // plasmid loss (good and bad respectively)
-    std::vector <double> loss_rates_good;
-    std::vector <double> loss_rates_bad;
-
-    std::vector <double> death_rate_infected;
-    
-    double cumul_loss_rate_good = 0.0;
-    double cumul_loss_rate_bad = 0.0;
+    // plasmid loss 
+    std::vector <double> loss_rates;
 
     if (Ns == 0 && Ni == 0)
     {
@@ -520,101 +744,80 @@ void event_chooser(int const time_step)
     // and infection rates
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
-        
+/* 
         if (Susceptible[S_idx].x < 0.0)
         {
             std::cout << "time: " << time_step << " Ns: " << Ns << " inf_idx: " << S_idx << " " << Susceptible[S_idx].x << std::endl;
         }
+*/
 
-        assert(Susceptible[S_idx].x >= 0);
-        assert(Susceptible[S_idx].x <= 1.0);
+        assert(Susceptible[S_idx].nplasmids == 0);
 
         // 0. Birth of susceptibles
-        rate_birth = b(Susceptible[S_idx].x) * (1.0 - kappa * (Ns + Ni));
+        rate_birth = b_Susceptible(Susceptible[S_idx].plasmid[0], Susceptible.p_chr, Susceptible.t_chr) * (1.0 - kappa * (Ns + Ni));
         birth_rates_susceptible.push_back(rate_birth);
 
         total_rates[0] += rate_birth;
 
-        // 1. infection of susceptible by good plasmid
-        // note that infection rates are independent of the number of 
-        // bacteria already infected
-        rate_infect = (1.0 - Susceptible[S_idx].x) * psi_G;
-        infection_rate_susceptible_good.push_back(rate_infect);
         
-        total_rates[1] += rate_infect;
-        
-        // 2. infection of susceptible by bad plasmid
-        // note that infection rates are independent of the number of 
-        // bacteria already infected
-        rate_infect = (1.0 - Susceptible[S_idx].x) * psi_B;
-        infection_rate_susceptible_bad.push_back(rate_infect);
-        
-        total_rates[2] += rate_infect;
     } // end for S_idx
 
-    // 3. Deaths susceptibles
-    double death_rate_S = Ns * d;
-
-    total_rates[3] += death_rate_S;
-
-    double co_infection_bad, co_infection_good, death_rate;
+    // 1. infection of susceptible by plasmid
+    // in the fisherian sexsel model 'infection' occurs via conjugation
+    // not environmental uptake
+    // hence the rate of infections should depend on number of 
+    // bacteria already infected
+    // COME BACK to this spot after reading Keeling & Rohani
+    rate_infect =  ((Ns*Ni)/ N) * psi;
+        
+    total_rates[1] = rate_infect;
 
     // now go through the infected hosts 
     for (int inf_idx = 0; inf_idx < Ni; ++inf_idx)
     {
         // bounds checking. If there is a buffer overflow
         // these numbers typically are not between bounds
-        assert(Infected[inf_idx].x >= 0.0);
-        assert(Infected[inf_idx].x <= 1.0);
+        assert(Infected[inf_idx].nplasmids > 0.0);
+        assert(Infected[inf_idx].nplasmids <= nplasmid_max);
         
-        if (Infected[inf_idx].x < 0.0)
+   /*     if (Infected[inf_idx].x < 0.0)
         {
             std::cout << "time: " << time_step << " Ni: " << Ni << " inf_idx: " << inf_idx << " " << Infected[inf_idx].x << std::endl;
         }
+*/
 
-
-        // 4. birth infected host
-        rate_birth = F(Infected[inf_idx].fraction_good) * 
-            b(Infected[inf_idx].x) * (1.0 - kappa * (Ns + Ni));
+        // 2. birth infected host   
+        rate_birth = b_Infected(Infected.t_plasmid, Infected.p_plasmid, Infected.t_chr, Infected.p_chr) * (1.0 - kappa * (Ns + Ni));
         
         birth_rates_infected.push_back(rate_birth);
 
-        total_rates[4] += rate_birth;
+        total_rates[2] += rate_birth;
 
-        // 5, 6. loss of a good or bad plasmid 
+        // 3.  loss of a plasmid 
         // a single plasmid loss event
-        gamma_loss(rate_loss_good, rate_loss_bad, Infected[inf_idx]);
+        gamma_loss(rate_loss, Infected[inf_idx]);
 
-        cumul_loss_rate_bad += rate_loss_bad;
-        cumul_loss_rate_good += rate_loss_good;
+	//update individual loss rates
+	// as well as cumulative loss rate
+        loss_rates.push_back(rate_loss);
+        total_rates[3] += rate_loss;
 
-        loss_rates_good.push_back(rate_loss_good);
-        total_rates[5] += rate_loss_good;
-
-        loss_rates_bad.push_back(rate_loss_bad);
-        total_rates[6] += rate_loss_bad;
-
-        // 7. death rate infected
-        death_rate = Infected[inf_idx].fraction_good * dG + 
-            (1.0 - Infected[inf_idx].fraction_good) * dB;
-
-        death_rate_infected.push_back(death_rate);
-        total_rates[7] += death_rate;
-
-        // 8. infection with a good plasmid
-        co_infection_good = sigma * (1.0 - Infected[inf_idx].x) * psi_G;
-        infection_rate_infected_good.push_back(co_infection_good);
-        
-        total_rates[8] += co_infection_good;
-
-        // 9. infection with a bad plasmid
-        co_infection_bad = sigma * (1.0 - Infected[inf_idx].x) * psi_B;
-        infection_rate_infected_bad.push_back(co_infection_bad);
-        
-        total_rates[9] += co_infection_bad;
     }
 
-    assert(infection_rate_infected_bad.size() == Ni);
+    // 4. conjugation between infected
+    conjugation_rate = ((Ni*Ni)/N) * psi;
+        
+    total_rates[4] = conjugation_rate;
+
+    // 5. Deaths susceptibles
+    death_rate_S = Ns * d;
+
+    total_rates[5] = death_rate_S;
+
+    // 6. death rate infected
+    death_rate_I = Ni * d; 
+
+    total_rates[6] = death_rate_I;
 
     // done, now determine what to do by making a weighted distribution
     // this will return a number between 0 and n_events - 1
@@ -637,88 +840,50 @@ void event_chooser(int const time_step)
         
         case 0: // birth of susceptible
             {
-                assert(birth_rates_susceptible.size() == Ns);
-                // set up a probability distribution
-                // that determines which individual will be drawn
-                // to give birth
-            std::discrete_distribution <int> birth_susc_distribution(
-                    birth_rates_susceptible.begin()
-                    ,birth_rates_susceptible.end());
+		assert(birth_rates_susceptible.size() == Ns);
 
-            // then draw from the probability distribution
-            // to determine the individual that gives birth
-            S_idx = birth_susc_distribution(rng_r);
+		// set up a probability distribution
+		// that determines which individual will be drawn
+		// to give birth
+		std::discrete_distribution <int> birth_susc_distribution(
+			birth_rates_susceptible.begin()
+			,birth_rates_susceptible.end());
 
-            // check whether the number is indeed
-            // conforming to a susceptible
-            //
-            // note that S_idx is an index from 0 to Ns - 1
-            // thus it does not include Ns itself
-            assert(S_idx >= 0);
-            assert(S_idx < Ns);
+		// then draw from the probability distribution
+		// to determine the individual that gives birth
+		S_idx = birth_susc_distribution(rng_r);
 
-            // execute the birth() function which also updates the stats
-            birth(Susceptible[S_idx], true);
+		// note that S_idx is an index from 0 to Ns - 1
+		// thus it does not include Ns itself
+		assert(S_idx >= 0);
+		assert(S_idx < Ns);
 
-            break;
+		// execute the birth() function which also updates the stats
+		birth(Susceptible[S_idx], true);
+
+		break;
             }
 
-        case 1: // infection of a susceptible by good plasmid
+        case 1: // infection of a susceptible 
             {
-                assert(infection_rate_susceptible_good.size() == Ns);
-                // set up a probability distribution
-                // that determines which individual will get infected
-                // by a good plasmid
-                std::discrete_distribution <int> infection_susceptible_good_dist(
-                    infection_rate_susceptible_good.begin()
-                    ,infection_rate_susceptible_good.end());
-
+                // choose a susceptible individual at random 
+                // to get infected
                 // then draw from the probability distribution
                 // to determine the individual that gets infected
-                S_idx = infection_susceptible_good_dist(rng_r);
+                S_idx = susceptible_sampler(rng_r);
 
                 // bounds checking
                 assert(S_idx >= 0);
                 assert(S_idx < Ns);
 
-                infection_susceptible(S_idx, true);
+                infection_susceptible(S_idx);
 
                 break;
             }
-        case 2: // infection of a susceptible by a bad plasmid
+
+        case 2: // birth infected host
             {
-                // set up a probability distribution
-                // that determines which individual will get infected
-                // by a bad plasmid
-                std::discrete_distribution <int> infection_susceptible_bad_dist(
-                    infection_rate_susceptible_bad.begin()
-                    ,infection_rate_susceptible_bad.end());
-
-                // then draw from the probability distribution
-                // to determine the individual that gets infected
-                S_idx = infection_susceptible_bad_dist(rng_r);
-
-                assert(S_idx >= 0);
-                assert(S_idx < Ns);
-
-                infection_susceptible(S_idx, false);
-
-                break;
-            }
-        case 3: // death susceptible
-            // each susceptible has the same chance of dying
-            // so we do not need to set up a probability distribution
-            // determining which susceptible is more likely to die relative
-            // to others, we simply pick a 
-            // random individual
-
-            // as we do not initialize any variables
-            // within a 'case n:' clause
-            // no curly braces needed
-            death_susceptible();
-            break;
-        case 4: // birth infected host
-            {
+		assert(birth_rates_infected.size() == Ni);
                 // set up probability distribution that determines
                 // which individual will give birth
                 std::discrete_distribution <int> birth_infected_dist(
@@ -737,58 +902,69 @@ void event_chooser(int const time_step)
                 
                 break;
             }
-        case 5: // loss of a single good plasmid
+
+        case 3: // loss of a single plasmid
             {
                 // set up probability distribution that determines
-                // which individual will lose a good plasmid
-                std::discrete_distribution <int> loss_good_plasmid_dist(
-                        loss_rates_good.begin()
-                        ,loss_rates_good.end());
+                // which individual will lose a plasmid
+                std::discrete_distribution <int> loss_plasmid_dist(
+                        loss_rates.begin()
+                        ,loss_rates.end());
 
                 // draw an individual from that distribution which is going
                 // to lose a plasmid
-                I_idx = loss_good_plasmid_dist(rng_r);
+                I_idx = loss_plasmid_dist(rng_r);
 
                 // bounds checking
                 assert(I_idx >= 0);
                 assert(I_idx < Ni);
                
                 // perform the actual plasmid loss 
-                loss_plasmid(I_idx, true);
+                loss_plasmid(I_idx);
             
                 break;
             }
-        case 6: // loss of a single bad plasmid
+
+        case 4: // conjugation infected 
             {
-                // set up probability distribution that determines
-                // which individual will lose a bad plasmid
-                std::discrete_distribution <int> loss_bad_plasmid_dist(
-                        loss_rates_bad.begin()
-                        ,loss_rates_bad.end());
+                //randomly pick
+                //which individual will be a receiver 
+                // draw the individual that is going to get co-infected
+                I_idx = infected_sampler(rng_r);
 
-                // draw an individual from that distribution which is going
-                // to lose a plasmid
-                I_idx = loss_bad_plasmid_dist(rng_r);
-
-                // bounds checking
+                // bounds check
                 assert(I_idx >= 0);
                 assert(I_idx < Ni);
 
-                // perform the actual plasmid loss
-                loss_plasmid(I_idx, false);
-                
+                // perform the actual conjugation
+		// where a donor will be selected 
+		// according to the receiver's preference
+                conjugation_infected(I_idx);
+
                 break;
             }
-        case 7:// death infected
-            {
-                // set up probability distribution that determines
-                // which individual will lose a bad plasmid
-                std::discrete_distribution <int> death_infected_dist(
-                        death_rate_infected.begin()
-                        ,death_rate_infected.end());
+        case 5: // death susceptible
+	    {
+            // each susceptible has the same chance of dying
+            // so we do not need to set up a probability distribution
+            // determining which susceptible is more likely to die relative
+            // to others, we simply pick a 
+            // random individual
+                S_idx = susceptible_sampler(rng_r);
+                assert(S_idx >= 0);
+                assert(S_idx < Ns);
+                
+                death_susceptible(S_idx);
 
-                // draw the individual that is going to die from that distribution
-                I_idx = death_infected_dist(rng_r);
+                break;
+	    }
+
+        case 6:// death infected
+            {
+                //currently, infected individuals
+		//all have same chance of dying
+		//so pick one at random 
+                I_idx = infected_sampler(rng_r);
 
                 // bounds check
                 assert(I_idx >= 0);
@@ -799,110 +975,130 @@ void event_chooser(int const time_step)
 
                 break;
             }
-        case 8: // co-infection good plasmid
-            {
-                //set up probability distribution that determines
-                //which individaul will get co-infected by a good plasmid
-                std::discrete_distribution <int> co_infection_good_dist(
-                    infection_rate_infected_good.begin()
-                    ,infection_rate_infected_good.end());
 
-                // draw the individual that is going to get co-infected
-                I_idx = co_infection_good_dist(rng_r);
-
-                // bounds check
-                assert(I_idx >= 0);
-                assert(I_idx < Ni);
-
-                // perform the actual co-infection
-                co_infection(I_idx, true);
-
-                break;
-            }
-        case 9: // co-infection bad plasmid
-            {
-                //set up probability distribution that determines
-                //which individaul will get co-infected by a good plasmid
-                std::discrete_distribution <int> co_infection_bad_dist(
-                    infection_rate_infected_bad.begin()
-                    ,infection_rate_infected_bad.end());
-
-                // draw the individual that is going to get co-infected
-                I_idx = co_infection_bad_dist(rng_r);
-
-                if (I_idx >= Ni)
-                {
-                    std::cout << I_idx << std::endl;
-                }
-
-                // bounds check
-                assert(I_idx >= 0);
-                assert(I_idx < Ni);
-
-                // perform the actual co-infection
-                co_infection(I_idx, false);
-
-                break;
-            }
         default:
             std::cout << "switch error" << std::endl;
             break;
     } // end switch
 } // end event_chooser(int const time_step)
 
+
 // write the data
 void write_data(std::ofstream &data_file
         ,int const time_step)
 {
-    double mean_resistance = 0.0;
-    double ss_resistance = 0.0;
-
-    double mean_freq_plasmid_good = 0.0;
-    double ss_freq_plasmid_good = 0.0;
 
     double mean_n_plasmid = 0.0;
     double ss_n_plasmid = 0.0;
 
-    double x,p_good,n_plasmid;
+    double mean_freq_p2_total = 0.0;
+    double ss_freq_p2_total = 0.0;
 
-    for (int I_idx = 0; I_idx < Ni; ++I_idx)
-    {
-        x = Infected[I_idx].x;
+    double mean_freq_p2_infected = 0.0;
+    double ss_freq_p2_infected = 0.0;
 
-        mean_resistance += x;
-        ss_resistance += x * x;
+    double mean_freq_p2_plasmid = 0.0;
+    double ss_freq_p2_plasmid = 0.0;
 
-        p_good = Infected[I_idx].fraction_good;
+    double mean_freq_t2_total = 0.0;
+    double ss_freq_t2_total = 0.0;
 
-        mean_freq_plasmid_good += p_good;
-        ss_freq_plasmid_good += p_good * p_good;
+    double mean_freq_t2_plasmid = 0.0;
+    double ss_freq_t2_plasmid = 0.0;
 
-        n_plasmid = Infected[I_idx].nplasmids;
+    double p2, p2_plasmid, t2, t2_plasmid, infected, n_plasmid;
 
+    for (int I_idx = 0; I_idx < Ni; ++I_idx) {
+        p2 = Infected[I_idx].p_pl + Infected[I_idx].p_chr;
+        p2_plasmid = Infected[I_idx].p_pl;
+
+        mean_freq_p2_total += p2;
+        ss_freq_p2_total += p2 * p2;
+
+        mean_freq_p2_infected += p2;
+        ss_freq_p2_infected += p2 * p2;
+
+        mean_freq_p2_plasmid += p2_plasmid ;
+        ss_freq_p2_plasmid += p2_plasmid * p2_plasmid;
+
+        t2 = Infected[I_idx].t_pl + Infected[I_idx].t_chr;
+        t2_plasmid = Infected[I_idx].t_pl;
+
+        mean_freq_t2_total += t2;
+        ss_freq_t2_total += t2 * t2;
+
+        mean_freq_t2_infected += t2;
+        ss_freq_t2_infected += t2 * t2;
+
+        mean_freq_t2_plasmid += t2_plasmid;
+        ss_freq_t2_plasmid += t2_plasmid * t2_plasmid;
+
+	n_plasmid = Infected[I_idx].nplasmids;
         mean_n_plasmid += n_plasmid;
         ss_n_plasmid += n_plasmid * n_plasmid;
     }
+    
+    mean_freq_p2_infected /= Ni;
+    mean_freq_p2_plasmid /= Ni;
 
-    mean_resistance /= Ni;
-    mean_freq_plasmid_good /= Ni;
+    mean_freq_t2_infected /= Ni;
+    mean_freq_t2_plasmid /= Ni;
+    
     mean_n_plasmid /= Ni;
 
-    double var_resistance = ss_resistance / Ni 
-        - mean_resistance * mean_resistance;
+    double var_p2_infected = ss_freq_p2_infected / Ni 
+        - mean_freq_p2_infected * mean_freq_p2_infected;
 
-    double var_freq_plasmid_good = ss_freq_plasmid_good / Ni
-        - mean_freq_plasmid_good * mean_freq_plasmid_good;
+    double var_t2_infected = ss_freq_t2_infected / Ni 
+        - mean_freq_t2_infected * mean_freq_t2_infected;
 
-    double var_n_plasmid = ss_n_plasmid / Ni
-        - mean_n_plasmid * mean_n_plasmid;
+    double var_p2_plasmid = ss_freq_p2_plasmid / Ni 
+        - mean_freq_p2_plasmid * mean_freq_p2_plasmid;
+
+    double var_t2_plasmid = ss_freq_t2_plasmid / Ni 
+        - mean_freq_t2_plasmid * mean_freq_t2_plasmid;
+
+    double var_n_plasmid = ss_n_plasmid / Ni 
+	    - mean_n_plasmid * mean_n_plasmid;
+
+    for (int S_idx = 0; S_idx < Ni; ++S_idx) {
+        p2 = Susceptible[S_idx].p_chr;
+
+        mean_freq_p2_total += p2;
+        ss_freq_p2_total += p2 * p2;
+
+        t2 = Susceptible[S_idx].t_chr;
+
+        mean_freq_t2_total += t2;
+        ss_freq_t2_total += t2 * t2;
+
+    }
+    
+    N = Ni + Ns;
+    mean_freq_p2_total /= N;
+    mean_freq_t2_total /= N;
+
+    double var_p2_total = ss_freq_p2_total / N 
+        - mean_freq_p2_total * mean_freq_p2_total;
+
+    double var_t2_total = ss_freq_t2_total / N
+        - mean_freq_t2_total * mean_freq_t2_total;
 
     data_file << time_step << ";"
-        << mean_resistance << ";"
-        << var_resistance << ";"
-        << mean_freq_plasmid_good << ";"
-        << var_freq_plasmid_good << ";"
         << Ns << ";"
         << Ni << ";"
+	<< mean_freq_p2_total << ";"
+	<< mean_freq_p2_infected << ";"
+	<< mean_freq_p2_plasmid << ";"
+	<< mean_freq_t2_total << ";"
+	<< mean_freq_t2_infected << ";"
+	<< mean_freq_t2_plasmid << ";"
+	<< var_p2_total << ";"
+	<< var_p2_infected << ";"
+	<< var_p2_plasmid << ";"
+	<< var_t2_total << ";"
+	<< var_t2_infected << ";"
+	<< var_t2_plasmid << ";"
         << mean_n_plasmid << ";"
         << var_n_plasmid << ";" << std::endl;
 

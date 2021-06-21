@@ -76,9 +76,11 @@ double loss_gamma = 0.0;
 double psi = 0.0;
 
 //chromosomal integration rate (plasmid integrated in chromosome)
+// not in use at the moment
 double tau = 0.0;
 
 //plasmid formation rate (plasmid formed from chromosome)
+// not in use currently
 double lambda = 0.0;
 
 // death rate 
@@ -140,17 +142,13 @@ Population Infected;
 
 // number of infected and susceptible hosts
 //
-int Ns = round(N/p_noplasmid_init);  
-int Ni = N - Ns;
+int Ns, Ni;   
 
 // vector of attractiveness for individuals with homozygote preference 
 // vector of attractiveness for individuals with heterozygote preference 
 std::vector <double> attract_homozygote;
 std::vector <double> attract_heterozygote;
 // for susceptible and infected
-
-std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
-std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
 
 // calculate attractiveness of Infected individual
 // for a putative homozygote with preference
@@ -211,6 +209,9 @@ double calc_attract_heterozygote(int const Donor_idx)
 // initialize population
 void init_pop()
 {
+    
+    Ns = round(N/p_noplasmid_init);  
+    Ni = N - Ns;
 
     // initialize susceptibles
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
@@ -311,10 +312,10 @@ void init_arguments(int argc, char ** argv)
     mu_t = atof(argv[15]);
     init_p = atof(argv[16]);
     init_t = atof(argv[17]);
-    base_name = argv[18];
-    alpha = atof(argv[19]);
-    h = atof(argv[20]);
-    l = atof(argv[21]);
+    alpha = atof(argv[18]);
+    h = atof(argv[19]);
+    l = atof(argv[20]);
+    base_name = argv[21];
     
 }//end init_arguments()
 
@@ -380,6 +381,7 @@ void infection_susceptible(int const S_idx)
     // choose an infected individual randomly 
     if(!Susceptible[S_idx].p_chr)  
     {
+        std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
 	I_idx = infected_sampler(rng_r);
     }
 
@@ -446,9 +448,10 @@ void conjugation_infected(int const Receive_idx)
     // pick a random infected individual 
     // as Donor
     bool haspref = Infected[Receive_idx].p_plasmid || Infected[Receive_idx].p_chr;
-
+    
     if(!haspref)
     {
+        std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
 	do Donor_idx = infected_sampler(rng_r);
 	while (Donor_idx == Receive_idx);
     }
@@ -616,13 +619,11 @@ void death_susceptible(int const random_susceptible)
 // and infected individuals is the same
 void death_infected(int const I_idx)
 {
-    int random_infected = infected_sampler(rng_r);
-
     assert(Infected[I_idx].nplasmids > 0);
-    assert(random_infected >= 0);
-    assert(random_infected < Ni);
-    update_death_attract(random_infected);
-    Infected[random_infected] = Infected[Ni - 1];
+    assert(I_idx >= 0);
+    assert(I_idx < Ni);
+    update_death_attract(I_idx);
+    Infected[I_idx] = Infected[Ni - 1];
     --Ni;
 
     assert(Ni >= 0);
@@ -871,6 +872,7 @@ void event_chooser(int const time_step)
                 // to get infected
                 // then draw from the probability distribution
                 // to determine the individual that gets infected
+                std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
                 S_idx = susceptible_sampler(rng_r);
 
                 // bounds checking
@@ -931,6 +933,7 @@ void event_chooser(int const time_step)
                 //randomly pick
                 //which individual will be a receiver 
                 // draw the individual that is going to get co-infected
+                std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
                 I_idx = infected_sampler(rng_r);
 
                 // bounds check
@@ -944,6 +947,7 @@ void event_chooser(int const time_step)
 
                 break;
             }
+
         case 5: // death susceptible
 	    {
             // each susceptible has the same chance of dying
@@ -951,6 +955,7 @@ void event_chooser(int const time_step)
             // determining which susceptible is more likely to die relative
             // to others, we simply pick a 
             // random individual
+                std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
                 S_idx = susceptible_sampler(rng_r);
                 assert(S_idx >= 0);
                 assert(S_idx < Ns);
@@ -965,6 +970,7 @@ void event_chooser(int const time_step)
                 //currently, infected individuals
 		//all have same chance of dying
 		//so pick one at random 
+                std::uniform_int_distribution<int> infected_sampler(0, Ni - 1);
                 I_idx = infected_sampler(rng_r);
 
                 // bounds check

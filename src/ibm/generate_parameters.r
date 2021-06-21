@@ -9,7 +9,7 @@ nrep <- 1
 max_time <- 1000000
 
 # p good init
-p_good_init <- 0.0
+p_noplasmid_init <- 0.9 
 
 # density-dependence parameter
 kappa <- 1e-04 
@@ -18,38 +18,54 @@ kappa <- 1e-04
 bmax <- 50
 
 # cost of resistance
-c_resist <- c(0.01,0.1,1)
+c <- c(0.01)
 
 # clearance rate good plasmid
-gamma_G <- 0
+loss_gamma <- 0.01
 
-# clearance rate bad plasmid
-gamma_B <- 0
+# cost of trait
+epsilon <- 0.01
 
-# force of infection of a good plasmid
-psi_G <- 10
-psi_B <- 10
+# cost of plasmid
+delta <- 0.01
+
+# conjugation rate 
+psi <- 0.05 
 
 # death rates
 d <- 1 # susceptible
-dB <- 50 # infected with bad
-dG <- 1 # infected with good
 
-# co-infection rate
-sigma <- 0
+# recombination rate
+r <- 1e-04 
+
+# chromosomal integration rate
+tau <- 0.0
 
 # mutation rate
-mu_x <- 0.01
-sdmu_x <- 0.5
+mu_p <- 0.01
+mu_t <- 0.01
 
-init_x <- 0.1
+init_p <- 0
+init_t <- 0
+
+# plasmid formation rate
+lambda <- 0.0
+
+# preference factor
+alpha <- 0.01
+
+# preference dominance coefficient
+h <- 0.5
+
+# trait dominance coefficient
+l <- 0.5
 
 # get the directory name of this script
 # we use this so that we can
 script.dir <- dirname(sys.frame(1)$ofile)
 
 # executable
-exe <- "./sexsel_bacteria.exe"
+exe <- "./fishersexsel_bacteria.exe"
 
 # save current time point to make
 # filenames that contain a time stamp
@@ -82,21 +98,25 @@ combinations <- as.data.frame(
         expand.grid(
                 exe=exe
                 ,max_time=max_time
-                ,p_good_init=p_good_init
+                ,p_noplasmid_init=p_noplasmid_init
                 ,kappa=kappa
                 ,bmax=bmax
-                ,c=c_resist
-                ,gamma_G=gamma_G
-                ,gamma_B=gamma_B
-                ,psi_G=psi_G
-                ,psi_B=psi_B
+                ,c=c
+		,epsilon=epsilon
+		,delta=delta
+                ,loss_gamma=loss_gamma
+                ,psi=psi
+		,tau=tau
+		,lambda=lambda
                 ,d=d
-                ,dB=dB
-                ,dG=dG
-                ,sigma=sigma
-                ,mu_x=mu_x
-                ,sdmu_x=sdmu_x
-                ,init_x=init_x
+		,r=r
+                ,mu_p=mu_p
+                ,mu_t=mu_t
+                ,init_p=init_p
+                ,init_t=init_t
+		,alpha=alpha
+		,h=h
+		,l=l
                 ,stringsAsFactors=F
                 ))
 
@@ -171,21 +191,25 @@ summarize.params <- function(...)
 summarize.params(
                 exe=exe
                 ,max_time=max_time
-                ,p_good_init=p_good_init
+                ,p_noplasmid_init=p_noplasmid_init
                 ,kappa=kappa
                 ,bmax=bmax
-                ,c=c_resist
-                ,gamma_G=gamma_G
-                ,gamma_B=gamma_B
-                ,psi_G=psi_G
-                ,psi_B=psi_B
+                ,c=c
+		,epsilon=epsilon
+		,delta=delta
+                ,loss_gamma=loss_gamma
+                ,psi=psi
+		,tau=tau
+		,lambda=lambda
                 ,d=d
-                ,dB=dB
-                ,dG=dG
-                ,sigma=sigma
-                ,mu_x=mu_x
-                ,sdmu_x=sdmu_x
-                ,init_x=init_x
+		,r=r
+                ,mu_p=mu_p
+                ,mu_t=mu_t
+                ,init_p=init_p
+                ,init_t=init_t
+		,alpha=alpha
+		,h=h
+		,l=l
                 )
 #
 #

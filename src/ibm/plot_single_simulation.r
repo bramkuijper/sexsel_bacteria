@@ -114,18 +114,17 @@ if (data.first)
 # first plot: mean_resistance
 p1 <- ggplot(data=the.data
         ,aes(x=time)) +
-            geom_line(aes(y = mean_resistance, colour="Mean resistance")) +
+            geom_line(aes(y = freq_p2_all, colour="Overall frequency p2")) +
             theme_classic() + 
             xlab("Generation") + 
-            ylab("Mean resistance")
+            ylab("Mean preference frequency")
             
 p2 <- ggplot(data=the.data
         ,aes(x=time)) +
-            geom_line(aes(y = mean_plasmid_good, colour="Good")) +
-            geom_line(aes(y = 1.0 - mean_plasmid_good, colour = "Bad")) + 
+            geom_line(aes(y = freq_t2_all, colour="Overall frequency t2")) +
             theme_classic() + 
             xlab("Generation") + 
-            ylab("plasmid type %")
+            ylab("Mean trait frequency")
 
 p3 <- ggplot(data=the.data
         ,aes(x=time)) +

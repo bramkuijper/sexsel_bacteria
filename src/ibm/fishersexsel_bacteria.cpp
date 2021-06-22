@@ -27,10 +27,10 @@ std::string base_name;
 // p == 0 is p1 (no preference), p == 1 is p2 (preference)
 // t == 0 is t1 (no trait), t ==1 is t2 (trait present)
 
-// initial preference allele
-// initial trait allele
-bool init_p = 0;
-bool init_t = 0;
+// initial frequency of preference allele
+// initial frequency of trait allele
+double init_p2 = 0;
+double init_t2 = 0;
 
 // frequency of p2 and t2 in the population
 double freq_p2 = 0.0;
@@ -155,6 +155,7 @@ std::vector <double> attract_heterozygote;
 double calc_attract_homozygote(int const Donor_idx)
 {
     assert(Infected[Donor_idx].nplasmids > 0);
+    assert(Infected[Donor_idx].nplasmids <= nplasmid_max);
     // check if infected has trait
 	   // and susceptible has preference
     bool hastrait = Infected[Donor_idx].t_plasmid || Infected[Donor_idx].t_chr;
@@ -184,6 +185,7 @@ double calc_attract_homozygote(int const Donor_idx)
 double calc_attract_heterozygote(int const Donor_idx)
 {
     assert(Infected[Donor_idx].nplasmids > 0);
+    assert(Infected[Donor_idx].nplasmids <= nplasmid_max);
     // check if infected has trait
     bool hastrait = Infected[Donor_idx].t_plasmid || Infected[Donor_idx].t_chr;
     double l_current; // trait dominance coeff 
@@ -210,14 +212,16 @@ double calc_attract_heterozygote(int const Donor_idx)
 void init_pop()
 {
     
-    Ns = round(N/p_noplasmid_init);  
+    Ns = round(N*p_noplasmid_init);  
+
     Ni = N - Ns;
 
+    std::cout << "Initializing population...  Ns: " << Ns << " Ni: " << Ni << " " << std::endl;
     // initialize susceptibles
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
-        Susceptible[S_idx].p_chr = init_p;
-        Susceptible[S_idx].t_chr = init_t;
+        Susceptible[S_idx].p_chr = uniform(rng_r) < init_p2;
+        Susceptible[S_idx].t_chr = uniform(rng_r) < init_t2;
         Susceptible[S_idx].nplasmids = 0;
         Susceptible[S_idx].plasmid[0] = false;
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
@@ -225,10 +229,10 @@ void init_pop()
     // initialize infected individuals
     for (int I_idx = 0; I_idx < Ni; ++I_idx)
     {
-        Infected[I_idx].p_chr = init_p;
-        Infected[I_idx].t_chr = init_t;
-        Infected[I_idx].p_plasmid = init_p;
-        Infected[I_idx].t_plasmid = init_t;
+        Infected[I_idx].p_chr = uniform(rng_r) < init_p2;
+        Infected[I_idx].t_chr = uniform(rng_r) < init_t2;
+        Infected[I_idx].p_plasmid = uniform(rng_r) < init_p2;
+        Infected[I_idx].t_plasmid = uniform(rng_r) < init_t2;
         Infected[I_idx].nplasmids = n_plasmid_init;
         Infected[I_idx].plasmid[0] = true;
 	attract_homozygote.push_back(calc_attract_homozygote(I_idx));
@@ -310,8 +314,8 @@ void init_arguments(int argc, char ** argv)
     r = atof(argv[13]);
     mu_p = atof(argv[14]);
     mu_t = atof(argv[15]);
-    init_p = atof(argv[16]);
-    init_t = atof(argv[17]);
+    init_p2 = atof(argv[16]);
+    init_t2 = atof(argv[17]);
     alpha = atof(argv[18]);
     h = atof(argv[19]);
     l = atof(argv[20]);
@@ -340,8 +344,8 @@ void write_parameters(std::ofstream &data_file)
         << "seed" << ";" << seed << std::endl
         << "mu_p" << ";" << mu_p << std::endl
         << "mu_t" << ";" << mu_t << std::endl
-        << "init_p" << ";" << init_p << std::endl
-        << "init_t" << ";" << init_t << std::endl
+        << "init_p2" << ";" << init_p2 << std::endl
+        << "init_t2" << ";" << init_t2 << std::endl
         << "n_plasmid_init" << ";" << n_plasmid_init << std::endl
 	<< "h" << ";" << h << std::endl
 	<< "l" << ";" << l << std::endl;
@@ -400,7 +404,8 @@ void infection_susceptible(int const S_idx)
 
     // assert the infected IS infected
 
-    assert(Infected[I_idx].nplasmids >= 1);
+    assert(Infected[I_idx].nplasmids > 0);
+    assert(Infected[I_idx].nplasmids <= nplasmid_max);
 
     // and assign newly infected to stack of infected
     // individuals
@@ -417,12 +422,13 @@ void infection_susceptible(int const S_idx)
     Infected[Ni].p_plasmid = Infected[I_idx].p_plasmid;
     Infected[Ni].t_plasmid = Infected[I_idx].t_plasmid;
 
-    // update plasmids
-    Infected[Ni].nplasmids = 1;
-
     //update boolean and count of plasmids -- keeping this in case it's useful 
     Infected[Ni].plasmid[0] = 1;  // this works because the newly infected cell had no plasmids before
     ++Infected[Ni].nplasmids; 
+
+    //boundary checks
+    assert(Infected[Ni].nplasmids > 0);
+    assert(Infected[Ni].nplasmids <= nplasmid_max);
      
     ++Ni;
     //update attractiveness vectors
@@ -440,8 +446,9 @@ void conjugation_infected(int const Receive_idx)
     assert(Receive_idx >= 0);
     assert(Receive_idx < Ni);
 
-    // check indeed that both infected 
-    assert(Infected[Receive_idx].nplasmids >= 1);
+    // check indeed that both infected
+    assert(Infected[Receive_idx].nplasmids > 0);
+    assert(Infected[Receive_idx].nplasmids <= nplasmid_max);
 
     int Donor_idx;
     // if infected has no preference
@@ -476,7 +483,8 @@ void conjugation_infected(int const Receive_idx)
 	}	
     }
 
-    assert(Infected[Donor_idx].nplasmids >= 1);
+    assert(Infected[Donor_idx].nplasmids > 0);
+    assert(Infected[Donor_idx].nplasmids <= nplasmid_max);
 
     // no change in plasmid numbers because 
     // receiver keeps only one plasmid (random choice
@@ -536,7 +544,7 @@ void loss_plasmid(int const I_idx)
 // recombination between plasmid and chromosome alleles
 void recombination(Individual &ind)
 {
-    assert(ind.nplasmids >=1);
+    assert(ind.nplasmids <= nplasmid_max);
     Individual old_ind = ind;
 
     if(uniform(rng_r) < r)
@@ -583,11 +591,14 @@ void birth(Individual &parent, bool parent_susceptible)
     // birth of infected individual
     if (!parent_susceptible) 
 	{
+	assert(parent.nplasmids > 0);
 	for (int plasmid_idx = 0; plasmid_idx < parent.nplasmids; ++plasmid_idx)
 	    {
 	    // replicate plasmid to offspring
             kid.plasmid[plasmid_idx] = parent.plasmid[plasmid_idx];
 	    kid.nplasmids += kid.plasmid[plasmid_idx]; 
+	    kid.p_plasmid = parent.p_plasmid;
+	    kid.t_plasmid = parent.t_plasmid;
 	    recombination(kid);
 	    }
 
@@ -597,6 +608,10 @@ void birth(Individual &parent, bool parent_susceptible)
         
 	//bounds checking
         assert(Ns + Ni <= N);
+        assert(kid.p_chr == 0 || kid.p_chr ==1);
+        assert(kid.t_chr == 0 || kid.t_chr == 1);
+        assert(kid.p_plasmid == 0 || kid.p_plasmid ==1);
+        assert(kid.t_plasmid == 0 || kid.t_plasmid == 1);
         return;
 	} // end if (!parent_susceptible)
 
@@ -634,29 +649,6 @@ void death_infected(int const I_idx)
  * we will need it when we allow 
  * for more than one plasmid to co-exist in a cell
  */
-
-// co infect a host (index I_idx)
-// with another plasmid
-void co_infection(int const I_idx, bool const plasmid)
-{
-    // check whether the individual is indeed infected
-    assert(Infected[I_idx].nplasmids > 0);
-    assert(Infected[I_idx].nplasmids <=nplasmid_max);
-    // do nothing if individual already contains max number of
-    // plasmids
-    if (Infected[I_idx].nplasmids == nplasmid_max)
-    {
-        return;
-    }
-
-    // add another plasmid to the stack of plasmids
-    Infected[I_idx].plasmid[Infected[I_idx].nplasmids++] = plasmid;
-
-    // update the count of good plasmids
-    // if the value of plasmid_good is false, it will add 0
-    Infected[I_idx].nplasmids += plasmid;
-
-} // end co_infection
 
 
 // death of an infected individual at location I_idx
@@ -739,9 +731,17 @@ void event_chooser(int const time_step)
 
     if (Ns == 0 && Ni == 0)
     {
+        	
+        std::cout << "time: " << time_step << "  --> Population extinct!" << std::endl;
         exit(1);
     }
 
+    if (Ni == 0)
+    {
+        	
+        std::cout << "time: " << time_step << "  --> Ni extinct" << std::endl;
+        exit(1);
+    }
     // go through all susceptibles and calculate birth
     // and infection rates
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
@@ -779,6 +779,7 @@ void event_chooser(int const time_step)
     {
         // bounds checking. If there is a buffer overflow
         // these numbers typically are not between bounds
+        //std::cout << "time: " << time_step << " Ni: " << Ni << " inf_idx: " << inf_idx << " nplasmids: " << Infected[inf_idx].nplasmids << std::endl;
         assert(Infected[inf_idx].nplasmids > 0.0);
         assert(Infected[inf_idx].nplasmids <= nplasmid_max);
         
@@ -842,6 +843,7 @@ void event_chooser(int const time_step)
         
         case 0: // birth of susceptible
             {
+                std::cout << "Birth of susceptible" << std::endl;
 		assert(birth_rates_susceptible.size() == Ns);
 
 		// set up a probability distribution
@@ -868,6 +870,7 @@ void event_chooser(int const time_step)
 
         case 1: // infection of a susceptible 
             {
+                std::cout << "Infection of susceptible" << std::endl;
                 // choose a susceptible individual at random 
                 // to get infected
                 // then draw from the probability distribution
@@ -886,6 +889,7 @@ void event_chooser(int const time_step)
 
         case 2: // birth infected host
             {
+                std::cout << "Birth of infected" << std::endl;
 		assert(birth_rates_infected.size() == Ni);
                 // set up probability distribution that determines
                 // which individual will give birth
@@ -908,6 +912,7 @@ void event_chooser(int const time_step)
 
         case 3: // loss of a single plasmid
             {
+                std::cout << "Loss of plasmid" << std::endl;
                 // set up probability distribution that determines
                 // which individual will lose a plasmid
                 std::discrete_distribution <int> loss_plasmid_dist(
@@ -930,6 +935,7 @@ void event_chooser(int const time_step)
 
         case 4: // conjugation infected 
             {
+                std::cout << "Conjugation of infected" << std::endl;
                 //randomly pick
                 //which individual will be a receiver 
                 // draw the individual that is going to get co-infected
@@ -955,6 +961,8 @@ void event_chooser(int const time_step)
             // determining which susceptible is more likely to die relative
             // to others, we simply pick a 
             // random individual
+                std::cout << "Death susceptible" << std::endl;
+
                 std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
                 S_idx = susceptible_sampler(rng_r);
                 assert(S_idx >= 0);
@@ -967,6 +975,7 @@ void event_chooser(int const time_step)
 
         case 6:// death infected
             {
+                std::cout << "Death infected" << std::endl;
                 //currently, infected individuals
 		//all have same chance of dying
 		//so pick one at random 
@@ -1016,11 +1025,24 @@ void write_data(std::ofstream &data_file
     double mean_freq_t2_plasmid = 0.0;
     double ss_freq_t2_plasmid = 0.0;
 
-    double p2, p2_plasmid, t2, t2_plasmid, infected, n_plasmid;
+    double p2, p2_plasmid, t2, t2_plasmid, n_plasmid;
 
     for (int I_idx = 0; I_idx < Ni; ++I_idx) {
+	
+	assert(Infected[I_idx].p_plasmid <= 1);
+	assert(Infected[I_idx].p_chr <= 1);
+	assert(Infected[I_idx].t_plasmid <= 1);
+	assert(Infected[I_idx].t_chr <= 1);
+
         p2 = Infected[I_idx].p_plasmid + Infected[I_idx].p_chr;
         p2_plasmid = Infected[I_idx].p_plasmid;
+
+	assert(p2 <= 2);
+	assert(p2_plasmid <=1);
+
+//	std::cout << "I_idx " << I_idx << "allele p_plasmid  " <<  Infected[I_idx].p_plasmid << std::endl;
+//	std::cout << "I_idx " << I_idx << "p2_plasmid  " <<  p2_plasmid << std::endl;
+
 
         mean_freq_p2_total += p2;
         ss_freq_p2_total += p2 * p2;
@@ -1028,11 +1050,15 @@ void write_data(std::ofstream &data_file
         mean_freq_p2_infected += p2;
         ss_freq_p2_infected += p2 * p2;
 
-        mean_freq_p2_plasmid += p2_plasmid ;
+        mean_freq_p2_plasmid += p2_plasmid;
+//	std::cout << "mean frequency p2 plasmid sum " << mean_freq_p2_plasmid << std::endl;
         ss_freq_p2_plasmid += p2_plasmid * p2_plasmid;
 
         t2 = Infected[I_idx].t_plasmid + Infected[I_idx].t_chr;
         t2_plasmid = Infected[I_idx].t_plasmid;
+
+	assert(t2 <=2);
+	assert(t2_plasmid <=1);
 
         mean_freq_t2_total += t2;
         ss_freq_t2_total += t2 * t2;
@@ -1047,19 +1073,25 @@ void write_data(std::ofstream &data_file
         mean_n_plasmid += n_plasmid;
         ss_n_plasmid += n_plasmid * n_plasmid;
     }
+
+    assert(mean_freq_p2_infected <= 2 * Ni);
+    assert(mean_freq_t2_infected <= 2 * Ni);
+    assert(mean_freq_p2_plasmid <=  Ni);
+    assert(mean_freq_t2_plasmid <=  Ni);
+    assert(mean_n_plasmid <= Ni);
     
-    mean_freq_p2_infected /= Ni;
+    mean_freq_p2_infected /= 2*Ni;
     mean_freq_p2_plasmid /= Ni;
 
-    mean_freq_t2_infected /= Ni;
+    mean_freq_t2_infected /= 2*Ni;
     mean_freq_t2_plasmid /= Ni;
     
     mean_n_plasmid /= Ni;
 
-    double var_p2_infected = ss_freq_p2_infected / Ni 
+    double var_p2_infected = ss_freq_p2_infected / 2*Ni 
         - mean_freq_p2_infected * mean_freq_p2_infected;
 
-    double var_t2_infected = ss_freq_t2_infected / Ni 
+    double var_t2_infected = ss_freq_t2_infected / 2*Ni 
         - mean_freq_t2_infected * mean_freq_t2_infected;
 
     double var_p2_plasmid = ss_freq_p2_plasmid / Ni 
@@ -1071,7 +1103,12 @@ void write_data(std::ofstream &data_file
     double var_n_plasmid = ss_n_plasmid / Ni 
 	    - mean_n_plasmid * mean_n_plasmid;
 
-    for (int S_idx = 0; S_idx < Ni; ++S_idx) {
+    for (int S_idx = 0; S_idx < Ns; ++S_idx) {
+
+	assert(Infected[S_idx].p_chr <= 1);
+
+	assert(Infected[S_idx].t_chr <= 1);
+
         p2 = Susceptible[S_idx].p_chr;
 
         mean_freq_p2_total += p2;
@@ -1084,13 +1121,16 @@ void write_data(std::ofstream &data_file
 
     }
     
-    mean_freq_p2_total /= (Ni + Ns);
-    mean_freq_t2_total /= (Ni + Ns);
+    assert(mean_freq_p2_total <= 2 * Ni + Ns); 
+    assert(mean_freq_t2_total <= 2 * Ni + Ns); 
 
-    double var_p2_total = ss_freq_p2_total / (Ni + Ns) 
+    mean_freq_p2_total /= (2*Ni + Ns);
+    mean_freq_t2_total /= (2*Ni + Ns);
+
+    double var_p2_total = ss_freq_p2_total / (2*Ni + Ns) 
         - mean_freq_p2_total * mean_freq_p2_total;
 
-    double var_t2_total = ss_freq_t2_total / (Ni + Ns)
+    double var_t2_total = ss_freq_t2_total / (2*Ni + Ns)
     	    - mean_freq_t2_total * mean_freq_t2_total;
 
     data_file << time_step << ";"

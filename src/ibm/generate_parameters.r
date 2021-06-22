@@ -3,13 +3,13 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1
+nrep <- 10
 
 # maximum number of times
 max_time <- 1000000
 
-# p good init
-p_noplasmid_init <- 0.9 
+# p noplasmid init
+p_noplasmid_init <- 0.5 
 
 # density-dependence parameter
 kappa <- 1e-04 
@@ -18,22 +18,22 @@ kappa <- 1e-04
 bmax <- 50
 
 # cost of resistance
-c <- c(0.01)
+c <- c(0.001,0.01,0.1)
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
 
 # cost of trait
-epsilon <- 0.01
+epsilon <- c(0.001,0.01, 0.1)
 
 # cost of plasmid
-delta <- 0.01
+delta <- c(0.01,0.1)
 
 # conjugation rate 
-psi <- 0.05 
+psi <- c(0.01,0.05,0.1) 
 
 # death rates
-d <- 1 # susceptible
+d <- 0.01 # susceptible
 
 # recombination rate
 r <- 1e-04 
@@ -42,23 +42,23 @@ r <- 1e-04
 tau <- 0.0
 
 # mutation rate
-mu_p <- 0.01
-mu_t <- 0.01
+mu_p <- c(0.001,0.01)
+mu_t <- c(0.001,0.01)
 
-init_p <- 0
-init_t <- 0
+init_p2 <- c(0.01,0.1,0.8)
+init_t2 <- c(0.01,0.1,0.8)
 
 # plasmid formation rate
 lambda <- 0.0
 
 # preference factor
-alpha <- 0.01
+alpha <- c(0.001,0.01,0.1)
 
 # preference dominance coefficient
-h <- 0.5
+h <- c(0,0.5,1)
 
 # trait dominance coefficient
-l <- 0.5
+l <- c(0,0.5,1)
 
 # get the directory name of this script
 # we use this so that we can
@@ -112,8 +112,8 @@ combinations <- as.data.frame(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
-                ,init_p=init_p
-                ,init_t=init_t
+                ,init_p2=init_p2
+                ,init_t2=init_t2
 		,alpha=alpha
 		,h=h
 		,l=l
@@ -205,8 +205,8 @@ summarize.params(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
-                ,init_p=init_p
-                ,init_t=init_t
+                ,init_p2=init_p2
+                ,init_t2=init_t2
 		,alpha=alpha
 		,h=h
 		,l=l

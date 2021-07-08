@@ -44,7 +44,7 @@ int const nplasmid_max = 1;
 // number of timesteps that the simulation should run
 int max_time = 10;
 
-int skip_output_rows = 10;
+int skip_output_rows = 100;
 
 // initial number of plasmids in infected cells
 double n_plasmid_init = 1;
@@ -148,7 +148,14 @@ int Ns, Ni;
 // vector of attractiveness for individuals with heterozygote preference 
 std::vector <double> attract_homozygote;
 std::vector <double> attract_heterozygote;
-// for susceptible and infected
+
+// vector of genotype counts
+// for chromosome, plasmid, and chromosome_plasmid 
+// for purpose of LD calculations
+std::vector <int> genotype_counts_chr(4,0);
+std::vector <int> genotype_counts_infected_chr(4,0);
+std::vector <int> genotype_counts_plasmid(4,0);
+std::vector <int> genotype_counts_chr_pl(16,0);
 
 // calculate attractiveness of Infected individual
 // for a putative homozygote with preference
@@ -294,6 +301,112 @@ void update_conj_attract(int const receiver_idx)
     assert(attract_heterozygote.size() == Ni); 
      
 } // end of update_conj_attract
+
+// genotype returns an int
+// which can be used to update the genotype counts vectors
+int genotype_haploid(bool const allele_p, bool const allele_t)
+{
+    if(allele_p == 0 && allele_t == 0) {
+        return(0);
+        }
+
+    if(allele_p == 0 && allele_t == 1) {
+        return(1);
+        }
+    
+    if(allele_p == 1 && allele_t == 0) {
+        return(2);
+        }
+
+    if(allele_p == 1 && allele_t == 1) {
+        return(3);
+        }
+} // end of int genotype()
+
+int genotype_diploid(int const genotype_chr, int const genotype_pl)
+{
+     
+    if(genotype_chr == 0) {
+	return(genotype_pl);
+        }
+
+    if(genotype_chr == 1) {
+        return(genotype_pl + 4);
+        }
+    
+    if(genotype_chr == 2) {
+        return(genotype_pl + 8);
+        }
+
+    if(genotype_chr == 3) {
+        return(genotype_pl + 12);
+        }
+} // end of int genotype_diploid()
+
+// count genotypes using the vectors
+void count_genotypes()
+{
+    assert(genotype_counts_chr.size() == 4);
+    assert(genotype_counts_infected_chr.size() == 4);
+    assert(genotype_counts_plasmid.size() == 4);
+    assert(genotype_counts_chr_pl.size() == 16);
+
+    for (int S_idx = 0; S_idx < Ns; ++S_idx) 
+    {
+        int gen_chr = genotype_haploid(Susceptible[S_idx].p_chr, Susceptible[S_idx].t_chr);
+	assert(gen_chr >= 0);
+	assert(gen_chr < genotype_counts_chr.size());
+	++genotype_counts_chr[gen_chr];
+    }
+
+    for (int I_idx = 0; I_idx < Ni; ++I_idx) 
+    {
+        int gen_chr = genotype_haploid(Infected[I_idx].p_chr, Infected[I_idx].t_chr);
+	assert(gen_chr >= 0);
+	assert(gen_chr < genotype_counts_chr.size());
+	++genotype_counts_chr[gen_chr];
+	++genotype_counts_infected_chr[gen_chr];
+
+        int gen_plasmid = genotype_haploid(Infected[I_idx].p_plasmid, Infected[I_idx].t_plasmid);
+	assert(gen_plasmid >= 0);
+	assert(gen_plasmid < genotype_counts_plasmid.size());
+	++genotype_counts_plasmid[gen_plasmid];
+
+	int gen_chr_pl = genotype_diploid(gen_chr, gen_plasmid);
+	assert(gen_chr_pl >= 0);
+	assert(gen_chr_pl < genotype_counts_chr_pl.size());
+	++genotype_counts_chr_pl[gen_chr_pl];
+	
+    }
+
+    int sum_elements = 0;
+    sum_elements = std::accumulate(genotype_counts_chr.begin(), genotype_counts_chr.end(), 0);
+    assert(sum_elements == Ni + Ns);
+
+    sum_elements = std::accumulate(genotype_counts_infected_chr.begin(), genotype_counts_infected_chr.end(), 0);
+    assert(sum_elements == Ni);
+
+    sum_elements = std::accumulate(genotype_counts_plasmid.begin(), genotype_counts_plasmid.end(), 0);
+    assert(sum_elements == Ni);
+
+    sum_elements = std::accumulate(genotype_counts_chr_pl.begin(), genotype_counts_chr_pl.end(), 0);
+    assert(sum_elements == Ni);
+} // end of count_genotypes()
+
+void reset_genotype_counts()
+{
+    for (int g_idx = 0; g_idx < genotype_counts_chr.size(); ++g_idx) 
+        genotype_counts_chr[g_idx] = 0;	
+
+    for (int g_idx = 0; g_idx < genotype_counts_infected_chr.size(); ++g_idx) 
+        genotype_counts_infected_chr[g_idx] = 0;	
+
+    for (int g_idx = 0; g_idx < genotype_counts_plasmid.size(); ++g_idx) 
+        genotype_counts_plasmid[g_idx] = 0;	
+
+    for (int g_idx = 0; g_idx < genotype_counts_chr_pl.size(); ++g_idx) 
+        genotype_counts_chr_pl[g_idx] = 0;	
+}
 
 // initialize the parameters through the command line
 void init_arguments(int argc, char ** argv)
@@ -597,8 +710,8 @@ void birth(Individual &parent, bool parent_susceptible)
 	    // replicate plasmid to offspring
             kid.plasmid[plasmid_idx] = parent.plasmid[plasmid_idx];
 	    kid.nplasmids += kid.plasmid[plasmid_idx]; 
-	    kid.p_plasmid = parent.p_plasmid;
-	    kid.t_plasmid = parent.t_plasmid;
+	    kid.p_plasmid = mutation(mu_p, parent.p_plasmid);
+	    kid.t_plasmid = mutation(mu_t, parent.t_plasmid);
 	    recombination(kid);
 	    }
 
@@ -656,7 +769,7 @@ void death_infected(int const I_idx)
 // write headers to the datafile
 void write_data_headers(std::ofstream &data_file)
 {
-    data_file << "time;Ns;Ni;freq_p2_all;freq_p2_infected;freq_p2_plasmid;freq_t2_all;freq_t2_infected;freq_t2_plasmid;var_p2_all;var_p2_infected;var_p2_plasmid;var_t2_all;var_t2_infected;var_t2_plasmid;mean_nplasmid;var_nplasmid;" << std::endl;
+    data_file << "time;Ns;Ni;freq_p2_all;freq_p2_infected;freq_p2_plasmid;freq_t2_all;freq_t2_infected;freq_t2_plasmid;var_p2_all;var_p2_infected;var_p2_plasmid;var_t2_all;var_t2_infected;var_t2_plasmid;LD_chr;LD_inf_chr;LD_plasmid;mean_nplasmid;var_nplasmid;" << std::endl;
 } // end write_data_headers()
 
 // fecundity function that accounts for costly trait and preference,
@@ -843,7 +956,7 @@ void event_chooser(int const time_step)
         
         case 0: // birth of susceptible
             {
-                std::cout << "Birth of susceptible" << std::endl;
+        //        std::cout << "Birth of susceptible" << std::endl;
 		assert(birth_rates_susceptible.size() == Ns);
 
 		// set up a probability distribution
@@ -870,7 +983,7 @@ void event_chooser(int const time_step)
 
         case 1: // infection of a susceptible 
             {
-                std::cout << "Infection of susceptible" << std::endl;
+        //        std::cout << "Infection of susceptible" << std::endl;
                 // choose a susceptible individual at random 
                 // to get infected
                 // then draw from the probability distribution
@@ -889,7 +1002,7 @@ void event_chooser(int const time_step)
 
         case 2: // birth infected host
             {
-                std::cout << "Birth of infected" << std::endl;
+        //        std::cout << "Birth of infected" << std::endl;
 		assert(birth_rates_infected.size() == Ni);
                 // set up probability distribution that determines
                 // which individual will give birth
@@ -912,7 +1025,7 @@ void event_chooser(int const time_step)
 
         case 3: // loss of a single plasmid
             {
-                std::cout << "Loss of plasmid" << std::endl;
+        //        std::cout << "Loss of plasmid" << std::endl;
                 // set up probability distribution that determines
                 // which individual will lose a plasmid
                 std::discrete_distribution <int> loss_plasmid_dist(
@@ -935,7 +1048,7 @@ void event_chooser(int const time_step)
 
         case 4: // conjugation infected 
             {
-                std::cout << "Conjugation of infected" << std::endl;
+        //        std::cout << "Conjugation of infected" << std::endl;
                 //randomly pick
                 //which individual will be a receiver 
                 // draw the individual that is going to get co-infected
@@ -961,7 +1074,7 @@ void event_chooser(int const time_step)
             // determining which susceptible is more likely to die relative
             // to others, we simply pick a 
             // random individual
-                std::cout << "Death susceptible" << std::endl;
+//                std::cout << "Death susceptible" << std::endl;
 
                 std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
                 S_idx = susceptible_sampler(rng_r);
@@ -975,7 +1088,7 @@ void event_chooser(int const time_step)
 
         case 6:// death infected
             {
-                std::cout << "Death infected" << std::endl;
+        //        std::cout << "Death infected" << std::endl;
                 //currently, infected individuals
 		//all have same chance of dying
 		//so pick one at random 
@@ -998,7 +1111,6 @@ void event_chooser(int const time_step)
     } // end switch
 } // end event_chooser(int const time_step)
 
-
 // write the data
 void write_data(std::ofstream &data_file
         ,int const time_step)
@@ -1006,12 +1118,15 @@ void write_data(std::ofstream &data_file
 
     double mean_n_plasmid = 0.0;
     double ss_n_plasmid = 0.0;
-
+    
     double mean_freq_p2_total = 0.0;
     double ss_freq_p2_total = 0.0;
 
     double mean_freq_p2_infected = 0.0;
     double ss_freq_p2_infected = 0.0;
+
+    double mean_freq_p2_infected_chr = 0.0;
+    double ss_freq_p2_infected_chr = 0.0;
 
     double mean_freq_p2_plasmid = 0.0;
     double ss_freq_p2_plasmid = 0.0;
@@ -1022,10 +1137,14 @@ void write_data(std::ofstream &data_file
     double mean_freq_t2_infected = 0.0;
     double ss_freq_t2_infected = 0.0;
 
+    double mean_freq_t2_infected_chr = 0.0;
+    double ss_freq_t2_infected_chr = 0.0;
+
     double mean_freq_t2_plasmid = 0.0;
     double ss_freq_t2_plasmid = 0.0;
 
-    double p2, p2_plasmid, t2, t2_plasmid, n_plasmid;
+
+    double p2, p2_chr, p2_plasmid, t2, t2_chr, t2_plasmid, n_plasmid;
 
     for (int I_idx = 0; I_idx < Ni; ++I_idx) {
 	
@@ -1036,13 +1155,14 @@ void write_data(std::ofstream &data_file
 
         p2 = Infected[I_idx].p_plasmid + Infected[I_idx].p_chr;
         p2_plasmid = Infected[I_idx].p_plasmid;
+        p2_chr = Infected[I_idx].p_chr;
 
 	assert(p2 <= 2);
 	assert(p2_plasmid <=1);
+	assert(p2_chr <=1);
 
 //	std::cout << "I_idx " << I_idx << "allele p_plasmid  " <<  Infected[I_idx].p_plasmid << std::endl;
 //	std::cout << "I_idx " << I_idx << "p2_plasmid  " <<  p2_plasmid << std::endl;
-
 
         mean_freq_p2_total += p2;
         ss_freq_p2_total += p2 * p2;
@@ -1050,15 +1170,20 @@ void write_data(std::ofstream &data_file
         mean_freq_p2_infected += p2;
         ss_freq_p2_infected += p2 * p2;
 
+        mean_freq_p2_infected_chr += p2_chr;
+        ss_freq_p2_infected_chr += p2_chr * p2_chr;
+
         mean_freq_p2_plasmid += p2_plasmid;
 //	std::cout << "mean frequency p2 plasmid sum " << mean_freq_p2_plasmid << std::endl;
         ss_freq_p2_plasmid += p2_plasmid * p2_plasmid;
 
         t2 = Infected[I_idx].t_plasmid + Infected[I_idx].t_chr;
         t2_plasmid = Infected[I_idx].t_plasmid;
+        t2_chr = Infected[I_idx].t_chr;
 
 	assert(t2 <=2);
 	assert(t2_plasmid <=1);
+	assert(t2_chr <=1);
 
         mean_freq_t2_total += t2;
         ss_freq_t2_total += t2 * t2;
@@ -1066,25 +1191,33 @@ void write_data(std::ofstream &data_file
         mean_freq_t2_infected += t2;
         ss_freq_t2_infected += t2 * t2;
 
+        mean_freq_t2_infected_chr += t2_chr;
+        ss_freq_t2_infected_chr += t2_chr * t2_chr;
+
         mean_freq_t2_plasmid += t2_plasmid;
         ss_freq_t2_plasmid += t2_plasmid * t2_plasmid;
 
 	n_plasmid = Infected[I_idx].nplasmids;
         mean_n_plasmid += n_plasmid;
         ss_n_plasmid += n_plasmid * n_plasmid;
+
     }
 
     assert(mean_freq_p2_infected <= 2 * Ni);
     assert(mean_freq_t2_infected <= 2 * Ni);
+    assert(mean_freq_p2_infected_chr <=  Ni);
+    assert(mean_freq_t2_infected_chr <=  Ni);
     assert(mean_freq_p2_plasmid <=  Ni);
     assert(mean_freq_t2_plasmid <=  Ni);
     assert(mean_n_plasmid <= Ni);
     
     mean_freq_p2_infected /= 2*Ni;
     mean_freq_p2_plasmid /= Ni;
+    mean_freq_p2_infected_chr /= Ni;
 
     mean_freq_t2_infected /= 2*Ni;
     mean_freq_t2_plasmid /= Ni;
+    mean_freq_t2_infected_chr /= Ni;
     
     mean_n_plasmid /= Ni;
 
@@ -1097,8 +1230,14 @@ void write_data(std::ofstream &data_file
     double var_p2_plasmid = ss_freq_p2_plasmid / Ni 
         - mean_freq_p2_plasmid * mean_freq_p2_plasmid;
 
+    double var_p2_infected_chr = ss_freq_p2_infected_chr / Ni 
+        - mean_freq_p2_infected_chr * mean_freq_p2_infected_chr;
+
     double var_t2_plasmid = ss_freq_t2_plasmid / Ni 
         - mean_freq_t2_plasmid * mean_freq_t2_plasmid;
+
+    double var_t2_infected_chr = ss_freq_t2_infected_chr / Ni 
+        - mean_freq_t2_infected_chr * mean_freq_t2_infected_chr;
 
     double var_n_plasmid = ss_n_plasmid / Ni 
 	    - mean_n_plasmid * mean_n_plasmid;
@@ -1133,6 +1272,42 @@ void write_data(std::ofstream &data_file
     double var_t2_total = ss_freq_t2_total / (2*Ni + Ns)
     	    - mean_freq_t2_total * mean_freq_t2_total;
 
+    // linkage disequilibrium within the genome, 
+    // within genome in infected cells, within plasmid only
+    // TO BE ADDED: LD within plasmid and host --> need to read more about this
+    double LD_chr, LD_plasmid, LD_infected_chr; 
+    // to calculate linkage disequilibrium within genome
+    std::vector <double> freq_genotypes_chr(4,0);
+    // to calculate linkage disequilibrium within genome of infected cells
+    std::vector <double> freq_genotypes_infected_chr(4,0);
+    // to calculate linkage disequilibrium within plasmid 
+    std::vector <double> freq_genotypes_plasmid(4,0);
+    // to calculate LD host-plasmid
+    std::vector <double> freq_genotypes_host_plasmid(16,0);
+
+    // count all cells with given genotype
+    // this will change the genotype count vectors
+    count_genotypes();
+
+    // now calculate frequencies
+    for (int i = 0; i < freq_genotypes_chr.size(); ++i)
+    {
+        freq_genotypes_chr[i] = genotype_counts_chr[i]/(Ni+Ns); 
+        freq_genotypes_infected_chr[i] = genotype_counts_infected_chr[i]/Ni; 
+        freq_genotypes_plasmid[i] = genotype_counts_plasmid[i]/Ni; 
+    }   
+
+    for (int i = 0; i < freq_genotypes_host_plasmid.size(); ++i)
+    {
+	freq_genotypes_host_plasmid[i] = genotype_counts_chr_pl[i]/Ni; 
+    }
+
+    // calculate Linkage Disequilibrium 
+    LD_chr = freq_genotypes_chr[0]*freq_genotypes_chr[3] - freq_genotypes_chr[1]*freq_genotypes_chr[2]; 
+    LD_infected_chr = freq_genotypes_infected_chr[0]*freq_genotypes_infected_chr[3] - freq_genotypes_infected_chr[1]*freq_genotypes_infected_chr[2]; 
+    LD_plasmid = freq_genotypes_plasmid[0]*freq_genotypes_plasmid[3] - freq_genotypes_plasmid[1]*freq_genotypes_plasmid[2]; 
+ // EDITING HERE
+
     data_file << time_step << ";"
         << Ns << ";"
         << Ni << ";"
@@ -1148,6 +1323,9 @@ void write_data(std::ofstream &data_file
 	<< var_t2_total << ";"
 	<< var_t2_infected << ";"
 	<< var_t2_plasmid << ";"
+	<< LD_chr << ";"
+	<< LD_infected_chr << ";"
+	<< LD_plasmid << ";"
         << mean_n_plasmid << ";"
         << var_n_plasmid << ";" << std::endl;
 
@@ -1171,6 +1349,7 @@ int main(int argc, char **argv)
     // numerically iterate the simulation
     for (int time_idx = 0; time_idx < max_time; ++time_idx)
     {
+	reset_genotype_counts();
         event_chooser(time_idx);
 
         if (time_idx % skip_output_rows == 0)

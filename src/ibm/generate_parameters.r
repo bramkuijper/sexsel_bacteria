@@ -6,7 +6,7 @@
 nrep <- 10
 
 # maximum number of times
-max_time <- 1000000
+max_time <- 40000000
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -17,23 +17,27 @@ kappa <- 1e-04
 # max fecundity of the host
 bmax <- 50
 
-# cost of resistance
-c <- c(0.001,0.01,0.1)
+# cost of preference 
+c <- c(0.01,0.1)
+#c <- 0.1
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
 
 # cost of trait
-epsilon <- c(0.001,0.01, 0.1)
+#epsilon <- c(0.001,0.01, 0.1)
+epsilon <- 0.01
 
 # cost of plasmid
-delta <- c(0.01,0.1)
+#delta <- c(0.01,0.1)
+delta <- 0.01
 
 # conjugation rate 
-psi <- c(0.01,0.05,0.1) 
+#psi <- c(0.01,0.05,0.1) 
+psi <- 0.05 
 
 # death rates
-d <- 0.01 # susceptible
+d <- 0.01 
 
 # recombination rate
 r <- 1e-04 
@@ -42,23 +46,32 @@ r <- 1e-04
 tau <- 0.0
 
 # mutation rate
-mu_p <- c(0.001,0.01)
-mu_t <- c(0.001,0.01)
+#mu_p <- c(0.001,0.01)
+#mu_t <- c(0.001,0.01)
 
-init_p2 <- c(0.01,0.1,0.8)
-init_t2 <- c(0.01,0.1,0.8)
+mu_p <- 1e-6
+mu_t <- 1e-6 
+
+# initial frequencies of preference and trait
+#init_p2 <- c(0.01,0.1,0.8)
+#init_t2 <- c(0.01,0.1,0.8)
+init_p2 <- 0.01
+init_t2 <- 0.8
 
 # plasmid formation rate
 lambda <- 0.0
 
 # preference factor
-alpha <- c(0.001,0.01,0.1)
+#alpha <- c(0.001,0.01,0.1)
+alpha <- 0.01
 
 # preference dominance coefficient
-h <- c(0,0.5,1)
+#h <- c(0,0.5,1)
+h <- 0.5
 
 # trait dominance coefficient
-l <- c(0,0.5,1)
+#l <- c(0,0.5,1)
+l <- 0.5
 
 # get the directory name of this script
 # we use this so that we can
@@ -122,6 +135,7 @@ combinations <- as.data.frame(
 
 nrows <- nrow(combinations)
 
+print(combinations)
 # index number for output file of
 # each simulation
 file_idx <- 1

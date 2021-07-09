@@ -3,10 +3,10 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1
+nrep <- 10
 
 # maximum number of times
-max_time <- 100 
+max_time <- 40000000
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -18,8 +18,8 @@ kappa <- 1e-04
 bmax <- 50
 
 # cost of preference 
-#c <- c(0.01,0.1)
-c <- 0.1
+c <- c(0.01,0.1)
+#c <- 0.1
 
 # clearance rate good plasmid
 loss_gamma <- 0.01

@@ -469,7 +469,7 @@ void write_parameters(std::ofstream &data_file)
 // if mutation occurs 
 // turn allele p1 into p2 and vice-versa
 // same for trait locus
-double mutation(double const mu, bool const myallele)
+bool mutation(double const mu, bool const myallele)
 {
     bool allele = myallele; 
     if (uniform(rng_r) < mu)
@@ -688,7 +688,13 @@ void birth(Individual &parent, bool parent_susceptible)
     // mutate the preference and trait alleles
     // in the chromosome
     kid.p_chr = mutation(mu_p, parent.p_chr);
-    kid.t_chr = mutation(mu_t, parent.t_chr);
+    // introduce mutation bias
+    // if kid has trait == 1, mutation probability is twice as high
+    double mu_high = 2 * mu_t;
+    if(parent.t_chr == 1)
+    	kid.t_chr = mutation(mu_high, parent.t_chr);
+    else 
+        kid.t_chr = mutation(mu_t, parent.t_chr);
 
     // for now assuming strict inheritance
     // later on we might want to introduce segregational effects
@@ -710,8 +716,13 @@ void birth(Individual &parent, bool parent_susceptible)
 	    // replicate plasmid to offspring
             kid.plasmid[plasmid_idx] = parent.plasmid[plasmid_idx];
 	    kid.nplasmids += kid.plasmid[plasmid_idx]; 
+
 	    kid.p_plasmid = mutation(mu_p, parent.p_plasmid);
-	    kid.t_plasmid = mutation(mu_t, parent.t_plasmid);
+            if(parent.t_plasmid == 1)
+    	        kid.t_plasmid = mutation(mu_high, parent.t_plasmid);
+    	    else 
+        	kid.t_plasmid = mutation(mu_t, parent.t_plasmid);
+
 	    recombination(kid);
 	    }
 

@@ -10,42 +10,57 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      2120,         74]
-NotebookOptionsPosition[      1740,         60]
-NotebookOutlinePosition[      2076,         75]
-CellTagsIndexPosition[      2033,         72]
+NotebookDataLength[      3033,         95]
+NotebookOptionsPosition[      2412,         76]
+NotebookOutlinePosition[      2771,         92]
+CellTagsIndexPosition[      2728,         89]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
+Cell[BoxData["\t"], "Input",
+ CellChangeTimes->{
+  3.809879967398514*^9},ExpressionUUID->"c69e754b-417f-4065-be5e-\
+3ddc8df0bee1"],
+
+Cell[CellGroupData[{
+
+Cell["Differential equations of the different genotypes", "Section",
+ CellChangeTimes->{{3.8098807210763597`*^9, 3.809880754088752*^9}, 
+   3.809880820663392*^9, {3.8127839669408083`*^9, 
+   3.812783970747025*^9}},ExpressionUUID->"176e37b6-3857-4101-9062-\
+05665b8d3aac"],
+
 Cell[BoxData[
- RowBox[{"dSdt", "=", 
+ RowBox[{"dS1dt", "=", 
   RowBox[{
-   RowBox[{"b", 
+   RowBox[{"b1", 
     RowBox[{"(", 
      RowBox[{"1", "-", 
-      RowBox[{"\[Kappa]", " ", "NN"}]}], ")"}], "S"}], "+", 
-   RowBox[{"\[Gamma]B", " ", "IB"}], "+", 
-   RowBox[{"\[Gamma]G", " ", "IG"}], "-", 
+      RowBox[{"\[Kappa]", " ", "NN"}]}], ")"}], "S1"}], "+", 
+   RowBox[{"\[Gamma]B", " ", "I1B"}], "+", 
+   RowBox[{"\[Gamma]G", " ", "I1G"}], "-", 
    RowBox[{
     RowBox[{"(", 
      RowBox[{"d", "+", 
       RowBox[{
        RowBox[{"(", 
-        RowBox[{"1", "-", "\[Pi]B"}], ")"}], "\[Psi]B"}], "+", 
+        RowBox[{"1", "-", "\[Pi]1B"}], ")"}], "\[Psi]B"}], "+", 
       RowBox[{
        RowBox[{"(", 
-        RowBox[{"1", "-", "\[Pi]G"}], ")"}], "\[Psi]G"}]}], ")"}], 
+        RowBox[{"1", "-", "\[Pi]1G"}], ")"}], "\[Psi]G"}]}], ")"}], 
     "S"}]}]}]], "Input",
  CellChangeTimes->{{3.809240942809198*^9, 3.8092410048981028`*^9}, {
-  3.809241132059052*^9, 
-  3.809241157674675*^9}},ExpressionUUID->"6398e4a5-d646-4d05-9d6d-\
+   3.809241132059052*^9, 3.809241157674675*^9}, {3.8098813757066402`*^9, 
+   3.809881385780931*^9}, {3.809886651291367*^9, 3.809886656730048*^9}, 
+   3.809946165716926*^9, {3.809947889374317*^9, 
+   3.8099478907905397`*^9}},ExpressionUUID->"6398e4a5-d646-4d05-9d6d-\
 0f318eb68ddd"],
 
 Cell[BoxData[
- RowBox[{"dIGdt", "=", 
+ RowBox[{"dI1Gdt", "=", 
   RowBox[{
-   RowBox[{"bG", 
+   RowBox[{"b1G", 
     RowBox[{"(", 
      RowBox[{"1", "-", 
       RowBox[{"\[Kappa]", " ", "NN"}]}], ")"}], "IG"}], "+", 
@@ -54,13 +69,15 @@ Cell[BoxData[
      RowBox[{"1", "-", "\[Pi]G"}], ")"}], "\[Psi]G", " ", 
     "Ssw"}]}]}]], "Input",
  CellChangeTimes->{{3.8092417832805033`*^9, 3.809241836844701*^9}, 
-   3.80932057251322*^9, 
-   3.809320611392338*^9},ExpressionUUID->"822e3580-c803-4466-b2bc-\
+   3.80932057251322*^9, 3.809320611392338*^9, {3.809946159985302*^9, 
+   3.8099461628795967`*^9}},ExpressionUUID->"822e3580-c803-4466-b2bc-\
 bcecb3ab9926"]
+}, Open  ]]
 },
-WindowSize->{808, 911},
-WindowMargins->{{834, Automatic}, {228, Automatic}},
-FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
+WindowSize->{1236, 911},
+WindowMargins->{{Automatic, 607}, {162, Automatic}},
+Magnification->2.,
+FrontEndVersion->"12.0 for Mac OS X x86 (64-bit) (April 8, 2019)",
 StyleDefinitions->"Default.nb"
 ]
 (* End of Notebook Content *)
@@ -74,8 +91,12 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 713, 22, 31, "Input",ExpressionUUID->"6398e4a5-d646-4d05-9d6d-0f318eb68ddd"],
-Cell[1274, 44, 462, 14, 31, "Input",ExpressionUUID->"822e3580-c803-4466-b2bc-bcecb3ab9926"]
+Cell[558, 20, 130, 3, 59, "Input",ExpressionUUID->"c69e754b-417f-4065-be5e-3ddc8df0bee1"],
+Cell[CellGroupData[{
+Cell[713, 27, 271, 4, 134, "Section",ExpressionUUID->"176e37b6-3857-4101-9062-05665b8d3aac"],
+Cell[987, 33, 894, 24, 59, "Input",ExpressionUUID->"6398e4a5-d646-4d05-9d6d-0f318eb68ddd"],
+Cell[1884, 59, 512, 14, 59, "Input",ExpressionUUID->"822e3580-c803-4466-b2bc-bcecb3ab9926"]
+}, Open  ]]
 }
 ]
 *)

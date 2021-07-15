@@ -834,7 +834,8 @@ void event_chooser(int const time_step)
 } // end event_chooser(int const time_step)
 
 // write the data
-void write_data(std::ofstream &data_file
+void write_data(
+        std::ofstream &data_file
         ,int const time_step)
 {
     double mean_resistance = 0.0;
@@ -866,18 +867,25 @@ void write_data(std::ofstream &data_file
         ss_n_plasmid += n_plasmid * n_plasmid;
     }
 
-    mean_resistance /= Ni;
-    mean_freq_plasmid_good /= Ni;
-    mean_n_plasmid /= Ni;
+    double var_resistance = 0;
+    double var_freq_plasmid_good = 0;
+    double var_n_plasmid = 0;
 
-    double var_resistance = ss_resistance / Ni 
-        - mean_resistance * mean_resistance;
+    if (Ni > 0)
+    {
+        mean_resistance /= Ni;
+        mean_freq_plasmid_good /= Ni;
+        mean_n_plasmid /= Ni;
 
-    double var_freq_plasmid_good = ss_freq_plasmid_good / Ni
-        - mean_freq_plasmid_good * mean_freq_plasmid_good;
+        var_resistance = ss_resistance / Ni 
+            - mean_resistance * mean_resistance;
 
-    double var_n_plasmid = ss_n_plasmid / Ni
-        - mean_n_plasmid * mean_n_plasmid;
+        var_freq_plasmid_good = ss_freq_plasmid_good / Ni
+            - mean_freq_plasmid_good * mean_freq_plasmid_good;
+
+        var_n_plasmid = ss_n_plasmid / Ni
+            - mean_n_plasmid * mean_n_plasmid;
+    }
 
     data_file << time_step << ";"
         << mean_resistance << ";"

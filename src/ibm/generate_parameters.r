@@ -3,13 +3,13 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1
+nrep <- 10
 
 # maximum number of times
-max_time <- 1000000
+max_time <- 40000000
 
-# p good init
-p_good_init <- 0.0
+# p noplasmid init
+p_noplasmid_init <- 0.5 
 
 # density-dependence parameter
 kappa <- 1e-04 
@@ -17,39 +17,68 @@ kappa <- 1e-04
 # max fecundity of the host
 bmax <- 50
 
-# cost of resistance
-c_resist <- c(0.01,0.1,1)
+# cost of preference 
+c <- c(0.01,0.1)
+#c <- 0.1
 
 # clearance rate good plasmid
-gamma_G <- 0
+loss_gamma <- 0.01
 
-# clearance rate bad plasmid
-gamma_B <- 0
+# cost of trait
+#epsilon <- c(0.001,0.01, 0.1)
+epsilon <- 0.01
 
-# force of infection of a good plasmid
-psi_G <- 10
-psi_B <- 10
+# cost of plasmid
+#delta <- c(0.01,0.1)
+delta <- 0.01
+
+# conjugation rate 
+#psi <- c(0.01,0.05,0.1) 
+psi <- 0.05 
 
 # death rates
-d <- 1 # susceptible
-dB <- 50 # infected with bad
-dG <- 1 # infected with good
+d <- 0.01 
 
-# co-infection rate
-sigma <- 0
+# recombination rate
+r <- 1e-04 
+
+# chromosomal integration rate
+tau <- 0.0
 
 # mutation rate
-mu_x <- 0.01
-sdmu_x <- 0.5
+#mu_p <- c(0.001,0.01)
+#mu_t <- c(0.001,0.01)
 
-init_x <- 0.1
+mu_p <- 1e-6
+mu_t <- 1e-6 
+
+# initial frequencies of preference and trait
+#init_p2 <- c(0.01,0.1,0.8)
+#init_t2 <- c(0.01,0.1,0.8)
+init_p2 <- 0.01
+init_t2 <- 0.8
+
+# plasmid formation rate
+lambda <- 0.0
+
+# preference factor
+#alpha <- c(0.001,0.01,0.1)
+alpha <- 0.01
+
+# preference dominance coefficient
+#h <- c(0,0.5,1)
+h <- 0.5
+
+# trait dominance coefficient
+#l <- c(0,0.5,1)
+l <- 0.5
 
 # get the directory name of this script
 # we use this so that we can
 script.dir <- dirname(sys.frame(1)$ofile)
 
 # executable
-exe <- "./sexsel_bacteria.exe"
+exe <- "./fishersexsel_bacteria.exe"
 
 # save current time point to make
 # filenames that contain a time stamp
@@ -82,26 +111,31 @@ combinations <- as.data.frame(
         expand.grid(
                 exe=exe
                 ,max_time=max_time
-                ,p_good_init=p_good_init
+                ,p_noplasmid_init=p_noplasmid_init
                 ,kappa=kappa
                 ,bmax=bmax
-                ,c=c_resist
-                ,gamma_G=gamma_G
-                ,gamma_B=gamma_B
-                ,psi_G=psi_G
-                ,psi_B=psi_B
+                ,c=c
+		,epsilon=epsilon
+		,delta=delta
+                ,loss_gamma=loss_gamma
+                ,psi=psi
+		,tau=tau
+		,lambda=lambda
                 ,d=d
-                ,dB=dB
-                ,dG=dG
-                ,sigma=sigma
-                ,mu_x=mu_x
-                ,sdmu_x=sdmu_x
-                ,init_x=init_x
+		,r=r
+                ,mu_p=mu_p
+                ,mu_t=mu_t
+                ,init_p2=init_p2
+                ,init_t2=init_t2
+		,alpha=alpha
+		,h=h
+		,l=l
                 ,stringsAsFactors=F
                 ))
 
 nrows <- nrow(combinations)
 
+print(combinations)
 # index number for output file of
 # each simulation
 file_idx <- 1
@@ -171,21 +205,25 @@ summarize.params <- function(...)
 summarize.params(
                 exe=exe
                 ,max_time=max_time
-                ,p_good_init=p_good_init
+                ,p_noplasmid_init=p_noplasmid_init
                 ,kappa=kappa
                 ,bmax=bmax
-                ,c=c_resist
-                ,gamma_G=gamma_G
-                ,gamma_B=gamma_B
-                ,psi_G=psi_G
-                ,psi_B=psi_B
+                ,c=c
+		,epsilon=epsilon
+		,delta=delta
+                ,loss_gamma=loss_gamma
+                ,psi=psi
+		,tau=tau
+		,lambda=lambda
                 ,d=d
-                ,dB=dB
-                ,dG=dG
-                ,sigma=sigma
-                ,mu_x=mu_x
-                ,sdmu_x=sdmu_x
-                ,init_x=init_x
+		,r=r
+                ,mu_p=mu_p
+                ,mu_t=mu_t
+                ,init_p2=init_p2
+                ,init_t2=init_t2
+		,alpha=alpha
+		,h=h
+		,l=l
                 )
 #
 #

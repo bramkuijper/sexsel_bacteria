@@ -8,7 +8,7 @@
 nrep <- 10
 
 # maximum number of times
-max_time <- 40000000
+max_time <- 125000 
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 

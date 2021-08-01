@@ -182,6 +182,12 @@ std::vector <int> genotype_counts_infected_chr(4,0);
 std::vector <int> genotype_counts_plasmid(4,0);
 std::vector <int> genotype_counts_chr_pl(16,0);
 
+void update_susceptible_distributions()
+{
+    
+}
+
+
 // calculate attractiveness of Infected individual
 // for a putative homozygote with preference
 double calc_attract_homozygote(int const Donor_idx)

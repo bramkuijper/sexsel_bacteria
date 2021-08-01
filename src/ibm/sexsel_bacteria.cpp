@@ -121,7 +121,9 @@ void init_pop()
     // initialize susceptibles
     for (int S_idx = 0; S_idx < Ns; ++S_idx)
     {
+
         Susceptible[S_idx].x = init_x;
+
         Susceptible[S_idx].nplasmids = 0;
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 

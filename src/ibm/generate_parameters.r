@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # R script to generate batch files with which
 # many instances of the simulation can be run
 
@@ -12,13 +14,13 @@ max_time <- 40000000
 p_noplasmid_init <- 0.5 
 
 # density-dependence parameter
-kappa <- 1e-04 
+kappa <- 0.01
 
 # max fecundity of the host
 bmax <- 50
 
 # cost of preference 
-c <- c(0.01,0.1)
+c <- c(0.0001)
 #c <- 0.1
 
 # clearance rate good plasmid
@@ -75,7 +77,7 @@ l <- 0.5
 
 # get the directory name of this script
 # we use this so that we can
-script.dir <- dirname(sys.frame(1)$ofile)
+script.dir <- getwd()
 
 # executable
 exe <- "./fishersexsel_bacteria.exe"

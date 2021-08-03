@@ -87,7 +87,8 @@ find_out_param_line <- function(filename)
 
 data.first <- F
 
-for(f_idx in 1:length(files)) {
+for (f_idx in 1:length(files)) 
+{
 	if (data.first)
 	{
 	    parameter_row <- find_out_param_line(files[f_idx])
@@ -188,4 +189,4 @@ for(f_idx in 1:length(files)) {
 		,sep="")
 
 	ggsave(output_file_name, big_plot, width=25,height = 15)
-	}
+}

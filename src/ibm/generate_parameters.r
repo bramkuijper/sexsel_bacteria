@@ -57,8 +57,8 @@ mu_t <- 1e-6
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-init_p2 <- 0.01
-init_t2 <- 0.8
+init_p2 <- 0.7
+init_t2 <- 0.4
 
 # plasmid formation rate
 lambda <- 0.0

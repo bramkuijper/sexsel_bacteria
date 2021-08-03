@@ -170,9 +170,6 @@ std::vector <double> attract_homozygote;
 std::vector <double> attract_heterozygote;
 
 // total birth rates of susceptible
-std::vector <double> birth_rates_susceptible;
-double sum_birth_rates_susceptible;
-std::discrete_distribution <int> distribution_birth_rates();
 
 // vector of genotype counts
 // for chromosome, plasmid, and chromosome_plasmid 
@@ -816,6 +813,8 @@ void event_chooser(int const time_step)
     // declare a vector that contains all the rates
     // re an individual's birth
     std::vector <double> birth_rates_infected;
+
+    std::vector <double> birth_rates_susceptible;
 
     // make vector to store force of infection rates between
     // susceptible and infecteds

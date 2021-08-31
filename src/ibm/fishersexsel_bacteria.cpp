@@ -45,7 +45,7 @@ double freq_t2 = 0.0;
 // number of timesteps that the simulation should run
 int max_time = 10;
 
-int skip_output_rows = 1;
+int skip_output_rows = 100;
 
 // initial number of plasmids in infected cells
 double n_plasmid_init = 1;
@@ -166,7 +166,7 @@ double calc_attract_susceptible(
     assert(geno_plasmid_infected >= 0);
     assert(geno_plasmid_infected < 4);
 
-    // no preference, no need to calculate anything more
+    // no preference, no need to calculate anything 
     if (!geno_has_p2[geno_susceptible])
     {
         return(1.0);
@@ -300,6 +300,7 @@ void recombine_infected(int const genotype_chr
     assert(genotype_plasmid >= 0);
     assert(genotype_plasmid < 4);
 
+    // obtain alleles
     bool allele_t_chr = geno_has_t2[genotype_chr];
     bool allele_p_chr = geno_has_p2[genotype_chr];
     bool allele_t_plasmid = geno_has_t2[genotype_plasmid];
@@ -314,6 +315,9 @@ void recombine_infected(int const genotype_chr
     int new_genotype_chr;
     int new_genotype_plasmid;
 
+    // get individual to recombine
+    Individual ind1(Infected[genotype_chr][genotype_plasmid][0]);
+
     // now recombine...
     // with Pr 1/2, recombination starts at t locus
     if (uniform(rng_r) < 0.5)
@@ -323,23 +327,27 @@ void recombine_infected(int const genotype_chr
         ind1.t_plasmid = allele_t_plasmid;
         ind1.p_plasmid = allele_p_chr;
 
-         new_genotype_chr = 
-             alleles2genotypenr[ind1.t_chr][ind1.p_chr];
-         new_genotype_plasmid = 
-             alleles2genotypenr[ind1.t_plasmid][ind1.p_plasmid];
-
-         Infected[genotype_chr][genotype_plasmid].pop_back();
-         Infected[genotype_chr][genotype_plasmid].pop_back();
     }
-    else
+    else  // recombination starts at p locus
     {
-
+        ind1.t_chr = allele_t_plasmid;
+        ind1.p_chr = allele_p_chr;
+        ind1.t_plasmid = allele_t_chr;
+        ind1.p_plasmid = allele_p_plasmid;
     }
+    
+    new_genotype_chr = 
+        alleles2genotypenr[ind1.t_chr][ind1.p_chr];
 
-    Individual ind1(Infected[genotype_chr][genotype_plasmid][0]);
+    new_genotype_plasmid = 
+     alleles2genotypenr[ind1.t_plasmid][ind1.p_plasmid];
 
+    // remove original individual
+    Infected[genotype_chr][genotype_plasmid].pop_back();
 
-}
+    // add a new one
+    Infected[new_genotype_chr][new_genotype_plasmid].push_back(ind1);
+} // end recombine_infected
 
 void mutate_infected(int const genotype_chr
         ,int const genotype_plasmid)
@@ -1053,6 +1061,8 @@ void event_chooser(int const time_step)
     bool allele_t_plasmid;
     bool allele_p_plasmid;
 
+    double total_recombination_rate;
+
     // now go through the infected host genotypes
     for (int geno_inf_chr_idx = 0; 
             geno_inf_chr_idx < 4; ++geno_inf_chr_idx)
@@ -1374,7 +1384,7 @@ void event_chooser(int const time_step)
         {
             std::discrete_distribution <int> recombination_dist(
                     recombination_infected.begin()
-                    ,recombination_infected.begin());
+                    ,recombination_infected.end());
 
             int infected_genotype_idx = recombination_dist(rng_r);
 
@@ -1382,6 +1392,8 @@ void event_chooser(int const time_step)
             int infected_genotype_chr = integer_division(infected_genotype_idx, 4) % 4;
 
             recombine_infected(infected_genotype_chr, infected_genotype_plasmid);
+
+            break;
         }
 
         default:
@@ -1549,8 +1561,6 @@ int main(int argc, char **argv)
         // I would not reset every timestep, rather
         // just update counts (easier)
         //reset_genotype_counts();
-        std::cout << time_idx << std::endl;
-
         event_chooser(time_idx);
 
         if (time_idx % skip_output_rows == 0)

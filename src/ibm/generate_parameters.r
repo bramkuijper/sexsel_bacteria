@@ -8,7 +8,7 @@
 nrep <- 10
 
 # maximum number of times
-max_time <- 125000 
+max_time <- 10e06 
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -38,7 +38,7 @@ delta <- 0.01
 
 # conjugation rate 
 #psi <- c(0.01,0.05,0.1) 
-pi <- 0.95 
+pi_inf <- 0.95 
 
 # death rates
 d <- 0.01 
@@ -122,7 +122,7 @@ combinations <- as.data.frame(
 		,epsilon=epsilon
 		,delta=delta
                 ,loss_gamma=loss_gamma
-                ,psi=psi
+                ,pi_inf=pi_inf
 		,tau=tau
 		,lambda=lambda
                 ,d=d
@@ -217,7 +217,7 @@ summarize.params(
 		,epsilon=epsilon
 		,delta=delta
                 ,loss_gamma=loss_gamma
-                ,psi=psi
+                ,pi_inf=pi_inf
 		,tau=tau
 		,lambda=lambda
                 ,d=d
@@ -229,6 +229,7 @@ summarize.params(
 		,alpha=alpha
 		,h=h
 		,l=l
+        ,N=N
                 )
 #
 #

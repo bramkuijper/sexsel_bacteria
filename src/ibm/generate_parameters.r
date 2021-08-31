@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 
+# (c) Ana Duarte 2021
 # R script to generate batch files with which
 # many instances of the simulation can be run
 

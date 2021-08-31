@@ -18,7 +18,7 @@
 // C++ random number generation unsigned int seed = get_nanoseconds();
 std::random_device rd;
 //unsigned seed = rd();
-unsigned seed = 0;
+unsigned seed = 2780352574;
 std::mt19937 rng_r{seed};
 std::uniform_real_distribution<> uniform(0.0,1.0);
 
@@ -153,7 +153,8 @@ int integer_division(int const x, int const y)
 }
 
 // calculate attractiveness of Infected individual
-// for a putative homozygote with preference
+// with given genotype
+// for Susceptible with given genotype 
 double calc_attract_susceptible(
         int const geno_susceptible
         ,int const geno_chr_infected
@@ -173,7 +174,6 @@ double calc_attract_susceptible(
     }
 
     // check if infected has trait
-	   // and susceptible has preference
     int n_trait_alleles = geno_has_t2[geno_chr_infected] + 
         geno_has_t2[geno_plasmid_infected]; 
 
@@ -198,7 +198,8 @@ double calc_attract_infected(
 
     int n_pref_alleles = geno_has_p2[geno_chr_infected_recipient] +
         geno_has_p2[geno_plasmid_infected_recipient];
-
+ 
+    // if no preference
     if (n_pref_alleles == 0)
     {
         return(1.0);
@@ -377,6 +378,8 @@ void mutate_infected(int const genotype_chr
     bool done = false;
 
     // build cumulative distribution
+    // go through all the options
+    // 0 - no mutation; 1 - there is mutation --> for all alleles 
     for (int mut_p_chr_idx = 0; mut_p_chr_idx < 2; ++mut_p_chr_idx)
     {
         for (int mut_t_chr_idx = 0; mut_t_chr_idx < 2; ++mut_t_chr_idx)
@@ -385,6 +388,9 @@ void mutate_infected(int const genotype_chr
             {
                 for (int mut_t_plasmid_idx = 0; mut_t_plasmid_idx < 2; ++mut_t_plasmid_idx)
                 {
+		    // ignore the no mutation at all option
+		    // because the event_chooser has already determined 
+		    // there would be at least one mutation
                     if (mut_p_chr_idx == 0 && 
                             mut_t_chr_idx == 0 && 
                             mut_p_plasmid_idx == 0 && 
@@ -485,12 +491,12 @@ void mutate_susceptible(int const genotype)
         case 0: // mutate p, not t
             {
                 p_allele_new = !p_allele;            
-                t_allele_new = t_allele;            
+               // t_allele_new = t_allele;            
                 break;
             }
         case 1: // mutate t, not p
             {
-                p_allele_new = p_allele;            
+               // p_allele_new = p_allele;            
                 t_allele_new = !t_allele;            
                 break;
             }
@@ -502,7 +508,7 @@ void mutate_susceptible(int const genotype)
             }
 
         default:
-            std::cout << "something went wrong..." << std::endl;
+            std::cout << "something went wrong with mutation..." << std::endl;
     }// end switch
 
     assert(Susceptible[genotype].size() > 0);
@@ -584,13 +590,15 @@ void init_arguments(int argc, char ** argv)
     N = atof(argv[21]);
     base_name = argv[22];
 
+  // for homozygote (at preference allele) recipients 
     attr_homz_recip[0] = 1.0; // attractiveness individual without ornament
     attr_homz_recip[1] = 1.0 + l * alpha; // attractiveness individual with one ornament allele
-    attr_homz_recip[2] = 1.0 + alpha; // attractiveness individual with one ornament allele
-    
+    attr_homz_recip[2] = 1.0 + alpha; // attractiveness individual with two ornament alleles
+   
+  // for heterozygote (at preference allele) recipients 
     attr_hetz_recip[0] = 1.0; // attractiveness individual without ornament
     attr_hetz_recip[1] = 1.0 + h * l * alpha; // attractiveness individual with one ornament allele
-    attr_hetz_recip[2] = 1.0 + h * alpha; // attractiveness individual with one ornament allele
+    attr_hetz_recip[2] = 1.0 + h * alpha; // attractiveness individual with two ornament alleles
 
     cost_pref[0] = 0.0;
     cost_pref[1] = h * c;
@@ -749,6 +757,7 @@ void loss_plasmid()
 // is going to be different with 
 void birth_susceptible(int const &genotype)
 {
+    assert(Susceptible[genotype] > 0);
     Individual kid(Susceptible[genotype][0]);
 
     kid.has_plasmid = false;
@@ -760,6 +769,7 @@ void birth_susceptible(int const &genotype)
 void birth_infected(int const genotype_chr
         ,int const genotype_plasmid)
 {
+    assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
     Individual kid(Infected[genotype_chr][genotype_plasmid][0]);
 
     assert(kid.has_plasmid);
@@ -1004,7 +1014,7 @@ void event_chooser(int const time_step)
     // and infection rates
     for (int geno_sus_chr_idx = 0; geno_sus_chr_idx < 4; ++geno_sus_chr_idx)
     {
-        // 0. birth rates infected
+        // 0. birth rates susceptible
         birth_rate_i = dens_dep <= 0.0 ?
             0.0
             :
@@ -1085,7 +1095,7 @@ void event_chooser(int const time_step)
                     ,geno_has_t2[geno_inf_chr_idx]
                     ,geno_has_p2[geno_inf_chr_idx]
                     ) * dens_dep * 
-                        Infected[geno_inf_chr_idx][geno_inf_chr_idx].size();
+                        Infected[geno_inf_chr_idx][geno_inf_plasmid_idx].size();
         
             birth_rates_infected.push_back(birth_rate_i);
 
@@ -1135,7 +1145,7 @@ void event_chooser(int const time_step)
     } // end for geno_inf_chr_idx
 
     // 3. loss of plasmid
-    total_rates[3] += gamma_loss * Ns;
+    total_rates[3] += gamma_loss * Ni;  // shouldn't this be Ni?
 
     // 4. conjugation between infected and infected
     // 16 x 16 = 256 combinations
@@ -1279,7 +1289,7 @@ void event_chooser(int const time_step)
             genotype_infected_plasmid = birth_infected_idx % 4;
 
             // and which chromosomal genotype it has
-            genotype_infected_chr = integer_division(birth_infected_idx,4) % 4;
+            genotype_infected_chr = integer_division(birth_infected_idx, 4) % 4;
 
             // perform a birth event
             birth_infected(
@@ -1302,6 +1312,10 @@ void event_chooser(int const time_step)
             //randomly pick
             //which individual will be a receiver 
             // draw the individual that is going to get co-infected
+	    // ???
+	    // draw pair from distribution made from force of infection
+	    // so pairs with higher force of infection
+	    // have higher chance of being picked
             std::discrete_distribution <int> infection_infected_dist(
                 force_infection_infected.begin()
                 ,force_infection_infected.end());
@@ -1328,8 +1342,6 @@ void event_chooser(int const time_step)
                     ) % 4;
 
             // perform the actual conjugation
-            // where a donor will be selected 
-            // according to the receiver's preference
             conjugation_infected(
                     recipient_chromosome
                     ,recipient_plasmid

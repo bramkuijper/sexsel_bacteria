@@ -858,14 +858,20 @@ void write_data_headers(std::ofstream &data_file)
     }
 
     data_file
+        << "Ns;"
+        << "Ni;"
+        << "N;"
         << "mean_freq_p2_total;"
         << "mean_freq_p2_susceptible;"
         << "mean_freq_p2_infected;"
         << "mean_freq_p2_plasmid;"
+        << "mean_freq_t2_chr;"
         << "mean_freq_t2_total;"
         << "mean_freq_t2_susceptible;"
         << "mean_freq_t2_infected;"
-        << "mean_freq_t2_plasmid;" << std::endl;
+        << "mean_freq_t2_plasmid;" 
+        << "mean_freq_t2_chr;" 
+        << std::endl;
 }// end write_data_headers()
 
 
@@ -1515,18 +1521,33 @@ void write_data(std::ofstream &data_file
     assert(mean_freq_t2_plasmid <= Ni);
     
     mean_freq_p2_total /= Ns + 2 * Ni;
+    
     mean_freq_p2_susceptible /= Ns;
+
+    if (Ns < 1)
+    {
+        mean_freq_p2_susceptible = 0;
+    }
+
     mean_freq_p2_infected /= 2*Ni;
     mean_freq_p2_plasmid /= Ni;
     mean_freq_p2_chr /= Ni + Ns;
 
     mean_freq_t2_total /= Ns + 2 * Ni;
     mean_freq_t2_susceptible /= Ns;
+    
+    if (Ns < 1)
+    {
+        mean_freq_t2_susceptible = 0;
+    }
     mean_freq_t2_infected /= 2*Ni;
     mean_freq_t2_plasmid /= Ni;
     mean_freq_t2_chr /= Ni + Ns;
 
 	data_file 
+        << Ns << ";"
+        << Ni << ";"
+        << N << ";"
         << mean_freq_p2_total << ";"
         << mean_freq_p2_susceptible << ";"
         << mean_freq_p2_infected << ";"

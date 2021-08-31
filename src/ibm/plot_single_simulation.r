@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 
 # this script should be run from the command line rather than from within Rstudio
 # to run it, go to the folder where it is saved
@@ -21,7 +23,10 @@ library("gridExtra")
 #}
 
 # list of simulation output files
-files <- list.files(path=".", pattern="^sim_bact_sexsel.*?\\.csv$")
+files <- list.files(
+        path=".",
+        pattern="^sim_bact_sexsel.*?\\.csv$")
+
 print(files)
 # output files of simulation files
 # consist of two parts
@@ -87,7 +92,7 @@ find_out_param_line <- function(filename)
 
 data.first <- F
 
-for(f_idx in 1:length(files)) {
+for (f_idx in 1:length(files)) {
 	if (data.first)
 	{
 	    parameter_row <- find_out_param_line(files[f_idx])
@@ -126,7 +131,7 @@ for(f_idx in 1:length(files)) {
 
 	p2 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_p2_all, colour="Overall frequency p2")) +
+		    geom_line(aes(y = mean_freq_p2_total, colour="Overall frequency p2")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean p2 frequency") +
@@ -134,16 +139,15 @@ for(f_idx in 1:length(files)) {
 		    
 	p3 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_t2_all, colour="Overall frequency t2")) +
+		    geom_line(aes(y = mean_freq_t2_total, colour="Overall frequency t2")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean t2 frequency") +
 		    ylim(0,1)
 
-
 	p4 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_p2_infected, colour="Freq p2 infected")) +
+		    geom_line(aes(y = mean_freq_p2_infected, colour="Freq p2 infected")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean p2 frequency infected") +
@@ -151,7 +155,7 @@ for(f_idx in 1:length(files)) {
 
 	p5 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_t2_infected, colour="Freq t2 infected")) +
+		    geom_line(aes(y = mean_freq_t2_infected, colour="Freq t2 infected")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean t2 frequency infected") +
@@ -159,7 +163,7 @@ for(f_idx in 1:length(files)) {
 
 	p6 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_p2_plasmid, colour="Freq p2 plasmid")) +
+		    geom_line(aes(y = mean_freq_p2_plasmid, colour="Freq p2 plasmid")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean p2 frequency plasmid") +
@@ -167,7 +171,7 @@ for(f_idx in 1:length(files)) {
 
 	p7 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = freq_t2_plasmid, colour="Freq t2 plasmid")) +
+		    geom_line(aes(y = mean_freq_t2_plasmid, colour="Freq t2 plasmid")) +
 		    theme_classic() + 
 		    xlab("Generation") + 
 		    ylab("Mean t2 frequency plasmid") +

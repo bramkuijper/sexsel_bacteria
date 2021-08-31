@@ -17,8 +17,7 @@
 
 // C++ random number generation unsigned int seed = get_nanoseconds();
 std::random_device rd;
-//unsigned seed = rd();
-unsigned seed = 2780352574;
+unsigned seed = rd();
 std::mt19937 rng_r{seed};
 std::uniform_real_distribution<> uniform(0.0,1.0);
 
@@ -757,7 +756,7 @@ void loss_plasmid()
 // is going to be different with 
 void birth_susceptible(int const &genotype)
 {
-    assert(Susceptible[genotype] > 0);
+    assert(Susceptible[genotype].size() > 0);
     Individual kid(Susceptible[genotype][0]);
 
     kid.has_plasmid = false;

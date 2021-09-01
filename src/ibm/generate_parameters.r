@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 
+# (c) Ana Duarte 2021
 # R script to generate batch files with which
 # many instances of the simulation can be run
 
@@ -8,13 +9,15 @@
 nrep <- 10
 
 # maximum number of times
-max_time <- 125000 
+max_time <- 10e06 
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
 
+N <- 7000
+
 # density-dependence parameter
-kappa <- 0.01
+kappa <- 1.0 / N
 
 # max fecundity of the host
 bmax <- 50
@@ -36,7 +39,7 @@ delta <- 0.01
 
 # conjugation rate 
 #psi <- c(0.01,0.05,0.1) 
-psi <- 0.05 
+pi_inf <- 0.95 
 
 # death rates
 d <- 0.01 
@@ -52,7 +55,7 @@ tau <- 0.0
 #mu_t <- c(0.001,0.01)
 
 mu_p <- 1e-6
-mu_t <- 1e-6 
+mu_t <- 2e-6 
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
@@ -120,7 +123,7 @@ combinations <- as.data.frame(
 		,epsilon=epsilon
 		,delta=delta
                 ,loss_gamma=loss_gamma
-                ,psi=psi
+                ,pi_inf=pi_inf
 		,tau=tau
 		,lambda=lambda
                 ,d=d
@@ -132,6 +135,7 @@ combinations <- as.data.frame(
 		,alpha=alpha
 		,h=h
 		,l=l
+        ,N=N
                 ,stringsAsFactors=F
                 ))
 
@@ -214,7 +218,7 @@ summarize.params(
 		,epsilon=epsilon
 		,delta=delta
                 ,loss_gamma=loss_gamma
-                ,psi=psi
+                ,pi_inf=pi_inf
 		,tau=tau
 		,lambda=lambda
                 ,d=d
@@ -226,6 +230,7 @@ summarize.params(
 		,alpha=alpha
 		,h=h
 		,l=l
+        ,N=N
                 )
 #
 #

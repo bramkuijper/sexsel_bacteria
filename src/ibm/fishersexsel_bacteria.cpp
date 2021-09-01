@@ -501,12 +501,12 @@ void mutate_susceptible(int const genotype)
         case 0: // mutate p, not t
             {
                 p_allele_new = !p_allele;            
-               // t_allele_new = t_allele;            
+                t_allele_new = t_allele;            
                 break;
             }
         case 1: // mutate t, not p
             {
-               // p_allele_new = p_allele;            
+                p_allele_new = p_allele;            
                 t_allele_new = !t_allele;            
                 break;
             }
@@ -705,8 +705,6 @@ void loss_plasmid()
     new_ind.p_chr = geno_has_p2[infected_chr_idx];
     new_ind.t_chr = geno_has_t2[infected_chr_idx];
     new_ind.has_plasmid = false;
-
-    Susceptible[infected_chr_idx].push_back(new_ind);
 
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
 
@@ -1084,7 +1082,7 @@ void event_chooser(int const time_step)
     } // end for geno_inf_chr_idx
 
     // 3. loss of plasmid
-    total_rates[3] += gamma_loss * Ni;  // shouldn't this be Ni?
+    total_rates[3] += gamma_loss * Ni;  
 
     // 4. conjugation between infected and infected
     // 16 x 16 = 256 combinations

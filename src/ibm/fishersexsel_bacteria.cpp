@@ -124,6 +124,10 @@ std::vector < std::vector < std::vector < Individual > > > Infected;
 //
 int Ns, Ni, N;   
 
+// sizes of the various classes, needed for sampling
+std::vector <int> Isizes;
+std::vector <int> Ssizes;
+
 //// vector of attractiveness for all individuals 
 //// from the perspective of a focal with homozygote preference 
 //std::vector <double> attract_homozygote;
@@ -233,9 +237,16 @@ void init_pop()
     // stochastically anyway)
 
     std::vector <Individual> v;
+
     for (int i = 0; i < 4; ++i)
     {
         Susceptible.push_back(v);
+        Ssizes.push_back(0);
+
+        for (int j = 0; j < 4; ++j)
+        {
+            Isizes.push_back(0);
+        }
     }
 
     for (int j = 0; j < 4; ++j)
@@ -522,46 +533,6 @@ void mutate_susceptible(int const genotype)
     Susceptible[alleles2genotypenr[t_allele_new][p_allele_new]].push_back(mutated_ind);
 }
 
-// genotype returns an int
-// which can be used to update the genotype counts vectors
-int genotype_haploid(bool const allele_p, bool const allele_t)
-{
-    if (allele_p == 0 && allele_t == 0) 
-    {
-        return(0);
-    }
-
-    if (allele_p == 0 && allele_t == 1) 
-    {
-        return(1);
-    }
-    
-    if (allele_p == 1 && allele_t == 0) 
-    {
-        return(2);
-    }
-
-    return(3);
-} // end of int genotype()
-
-//int genotype_diploid(int const genotype_chr, int const genotype_pl)
-//{
-//     
-//    if(genotype_chr == 0) {
-//	return(genotype_pl);
-//        }
-//
-//    if(genotype_chr == 1) {
-//        return(genotype_pl + 4);
-//        }
-//    
-//    if(genotype_chr == 2) {
-//        return(genotype_pl + 8);
-//        }
-//
-//    return(genotype_pl + 12);
-//} // end of int genotype_diploid()
-
 // initialize the parameters through the command line
 void init_arguments(int argc, char ** argv)
 {
@@ -718,38 +689,27 @@ void conjugation_infected(
 // loss of a single plasmid
 void loss_plasmid()
 {
-    // select random infected
-    std::uniform_int_distribution <int> infected_dist(0, Ni - 1);
+    std::discrete_distribution<int> infected_dist(
+            Isizes.begin()
+            ,Isizes.end()
+            );
 
-    int random_infected = infected_dist(rng_r);
+    int random_class = infected_dist(rng_r);
 
-    int sum_I = 0;
+    int infected_plasmid_idx = random_class % 4;
+    int infected_chr_idx = integer_division(random_class, 4) % 4;
 
-    for (int infected_chr_idx = 0;
-            infected_chr_idx < 4; ++infected_chr_idx)
-    {
-        for (int infected_plasmid_idx = 0;
-                infected_plasmid_idx < 4; ++infected_plasmid_idx)
-        {
-            sum_I += Infected[infected_chr_idx][infected_plasmid_idx].size();
+    Individual new_ind;
+    new_ind.p_chr = geno_has_p2[infected_chr_idx];
+    new_ind.t_chr = geno_has_t2[infected_chr_idx];
+    new_ind.has_plasmid = false;
 
-            assert(Infected[infected_chr_idx][infected_plasmid_idx].size() <= Ni);
+    Susceptible[infected_chr_idx].push_back(new_ind);
 
-            if (random_infected <= sum_I)
-            {
-                assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
+    assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
 
-                Individual new_ind(Susceptible[infected_chr_idx][0]);
-                Susceptible[infected_chr_idx].push_back(new_ind);
+    Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
 
-                Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
-                return;
-            }
-        }
-    }
-
-    // this should never be reached
-    std::cout << "should not happen: plasmid loss" << std::endl;
 }// end loss_plasmid()
 
 // birth event of an individual
@@ -779,62 +739,35 @@ void birth_infected(int const genotype_chr
 // death of susceptible individual
 void death_susceptible()
 {
-    std::uniform_int_distribution <int> susceptible_dist(0, Ns - 1);
-    int random_susceptible = susceptible_dist(rng_r);
+    std::discrete_distribution <int> susceptible_dist(
+            Ssizes.begin()
+            ,Ssizes.end());
 
-    int sum_S = 0;
+    int susceptible_genotype_idx = susceptible_dist(rng_r);
 
-    for (int susceptible_chr_idx = 0;
-            susceptible_chr_idx < 4; ++susceptible_chr_idx)
-    {
-        sum_S += Susceptible[susceptible_chr_idx].size();
+    assert(Susceptible[susceptible_genotype_idx].size() > 0);
 
-        if (random_susceptible <= sum_S)
-        {
-            Susceptible[susceptible_chr_idx].pop_back();
-            return;   
-        }
-    }
-
-    std::cout << "this should not have happened: death susceptible" << std::endl;
-
-    exit(1);
+    Susceptible[susceptible_genotype_idx].pop_back();
 }// end death_susceptible()
 
 // in this model the death rate for susceptible 
 // and infected individuals is the same
 void death_infected()
 {
-    std::uniform_int_distribution <int> infected_dist(0, Ni - 1);
-    int random_infected = infected_dist(rng_r);
+    std::discrete_distribution <int> infected_dist(
+            Isizes.begin()
+            ,Isizes.end());
 
-    int sum_I = 0;
+    int random_infected_idx = infected_dist(rng_r);
 
-    for (int infected_chr_idx = 0;
-            infected_chr_idx < 4; ++infected_chr_idx)
-    {
-        for (int infected_plasmid_idx = 0;
-                infected_plasmid_idx < 4; ++infected_plasmid_idx)
-        {
-            sum_I += Infected[infected_chr_idx][infected_plasmid_idx].size();
+    int infected_plasmid_idx = random_infected_idx % 4;
+    int infected_chr_idx = integer_division(random_infected_idx, 4) % 4;
 
-            assert(Infected[infected_chr_idx][infected_plasmid_idx].size() >= 0);
-            assert(Infected[infected_chr_idx][infected_plasmid_idx].size() <= Ni);
+    assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
+    assert(Infected[infected_chr_idx][infected_plasmid_idx].size() <= Ni);
 
+    Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
 
-            if (random_infected <= sum_I)
-            {
-                assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
-
-                Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
-                return;
-            }
-        }
-    }
-
-    // this should never be reached
-    std::cout << "should not happen: death_infected" << std::endl;
-    exit(1);
 } // end death_infected()
 
 // death of an infected individual at location I_idx
@@ -904,18 +837,23 @@ double b_Infected(bool const trait_pl
     return(bmax * exp(- cost_pref[n_pref_alleles] - cost_trait[n_trait_alleles] - delta));
 } // end of b_Infected()
 
+// update all the counts
 void update_counters()
 {
     Ns = 0;
     Ni = 0;
 
+    int Iidx = 0;
+
     for (int geno_chr_idx = 0; geno_chr_idx < 4; ++geno_chr_idx)
     {
-        Ns += Susceptible[geno_chr_idx].size();
+        Ns += Ssizes[geno_chr_idx] = Susceptible[geno_chr_idx].size();
 
         for (int geno_plasmid_idx = 0; geno_plasmid_idx < 4; ++geno_plasmid_idx)
         {
-            Ni += Infected[geno_chr_idx][geno_plasmid_idx].size();
+            Ni += Isizes[Iidx] = Infected[geno_chr_idx][geno_plasmid_idx].size();
+
+            ++Iidx;
         }
     }
 

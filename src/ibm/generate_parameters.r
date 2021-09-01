@@ -23,7 +23,7 @@ kappa <- 1.0 / N
 bmax <- 50
 
 # cost of preference 
-c <- c(0.0001)
+c <- c(0.001)
 #c <- 0.8
 
 # clearance rate good plasmid
@@ -51,11 +51,11 @@ r <- 1e-04
 tau <- 0.0
 
 # mutation rate
-#mu_p <- c(0.001,0.01)
-#mu_t <- c(0.001,0.01)
+#mu <- c(0.001,0.01)
+#mu_t_bias <- c(0.001,0.01)
 
-mu_p <- 1e-6
-mu_t <- 1e-5 
+mu <- 1e-6
+mu_t_bias <- 1e-5
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
@@ -128,8 +128,8 @@ combinations <- as.data.frame(
 		,lambda=lambda
                 ,d=d
 		,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
+                ,mu=mu
+                ,mu_t_bias=mu_t_bias
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha
@@ -223,8 +223,8 @@ summarize.params(
 		,lambda=lambda
                 ,d=d
 		,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
+                ,mu=mu
+                ,mu_t_bias=mu_t_bias
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha

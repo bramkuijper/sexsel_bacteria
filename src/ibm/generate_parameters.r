@@ -6,10 +6,10 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 10
+nrep <- 10 
 
 # maximum number of times
-max_time <- 1e08
+max_time <- 1e06
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -23,7 +23,7 @@ kappa <- 1.0 / N
 bmax <- 50
 
 # cost of preference 
-c <- c(0.0001)
+c <- c(0.000)
 #c <- 0.8
 
 # clearance rate good plasmid
@@ -31,11 +31,11 @@ loss_gamma <- 0.01
 
 # cost of trait
 #epsilon <- c(0.001,0.01, 0.1)
-epsilon <- 0.01
+epsilon <- 0.0
 
 # cost of plasmid
 #delta <- c(0.01,0.1)
-delta <- 0.01
+delta <- 0.0
 
 # conjugation rate 
 #psi <- c(0.01,0.05,0.1) 

@@ -152,7 +152,7 @@ bool geno_has_p2[4] = {0,0,1,1};
 
 int integer_division(int const x, int const y)
 {
-    return(int(floor(double(x) / y)));
+    return((int) floor((double) x / y));
 }
 
 // calculate attractiveness of Infected individual
@@ -578,6 +578,8 @@ void init_arguments(int argc, char ** argv)
     cost_trait[1] = l * epsilon;
     cost_trait[2] = epsilon;
 
+    // we roughly want 10000 lines of output 
+    skip_output_rows = ceil((double) max_time/10000);
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)

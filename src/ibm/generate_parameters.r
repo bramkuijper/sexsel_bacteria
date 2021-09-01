@@ -60,7 +60,7 @@ mu_t <- 2e-6
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-init_p2 <- 0.7
+init_p2 <- 0.1
 init_t2 <- 0.4
 
 # plasmid formation rate
@@ -68,7 +68,7 @@ lambda <- 0.0
 
 # preference factor
 #alpha <- c(0.001,0.01,0.1)
-alpha <- 0.01
+alpha <- 2
 
 # preference dominance coefficient
 #h <- c(0,0.5,1)

@@ -9,7 +9,7 @@
 nrep <- 10
 
 # maximum number of times
-max_time <- 1e07 
+max_time <- 1e08
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -24,7 +24,7 @@ bmax <- 50
 
 # cost of preference 
 c <- c(0.0001)
-#c <- 0.1
+#c <- 0.8
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
@@ -55,7 +55,7 @@ tau <- 0.0
 #mu_t <- c(0.001,0.01)
 
 mu_p <- 1e-6
-mu_t <- 2e-6 
+mu_t <- 1e-5 
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)

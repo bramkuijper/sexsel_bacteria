@@ -178,10 +178,26 @@ for (f_idx in 1:length(files))
 		    ylab("Mean t2 frequency plasmid") +
 		    ylim(0,1)
 
+	p8 <- ggplot(data=the.data
+		,aes(x=time)) +
+		    geom_line(aes(y = mean_freq_p2_chr, colour="Freq p2 chromosome")) +
+		    theme_classic() + 
+		    xlab("Generation") + 
+		    ylab("Mean p2 frequency chromosome") +
+		    ylim(0,1)
+
+	p9 <- ggplot(data=the.data
+		,aes(x=time)) +
+		    geom_line(aes(y = mean_freq_t2_chr, colour="Freq t2 chromosome")) +
+		    theme_classic() + 
+		    xlab("Generation") + 
+		    ylab("Mean t2 frequency chromosome") +
+		    ylim(0,1)
 	big_plot <- arrangeGrob(p1, 
 							p2, 
 							p3,
 							p4, p5,p6,p7,	
+							p8,p9,
 							nrow=3,ncol=3)
 
 	the.base.name <- basename(files[f_idx])

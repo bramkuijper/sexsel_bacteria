@@ -810,7 +810,7 @@ void write_data_headers(std::ofstream &data_file)
         << "mean_freq_p2_susceptible;"
         << "mean_freq_p2_infected;"
         << "mean_freq_p2_plasmid;"
-        << "mean_freq_t2_chr;"
+        << "mean_freq_p2_chr;"
         << "mean_freq_t2_total;"
         << "mean_freq_t2_susceptible;"
         << "mean_freq_t2_infected;"

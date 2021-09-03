@@ -270,7 +270,7 @@ void init_pop()
         genotype_chr = alleles2genotypenr[allele_chr_is_t2][allele_chr_is_p2];
 
         Susceptible[genotype_chr].push_back(init_ind);
-        assert(Susceptible[genotype_chr].size());
+        assert(Susceptible[genotype_chr].size() > 0);
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 
     bool allele_plm_is_p2;
@@ -298,6 +298,7 @@ void init_pop()
         genotype_plasmid = alleles2genotypenr[allele_plm_is_t2][allele_plm_is_p2];
 
         Infected[genotype_chr][genotype_plasmid].push_back(init_ind);
+	assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
     }
 }//end void init_pop() 
 
@@ -709,6 +710,8 @@ void loss_plasmid()
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
 
     Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
+
+    Susceptible[infected_chr_idx].push_back(new_ind);
 
 }// end loss_plasmid()
 

@@ -9,7 +9,7 @@
 nrep <- 10 
 
 # maximum number of times
-max_time <- 1e06
+max_time <- 1e8
 
 # p noplasmid init
 p_noplasmid_init <- 0.5 
@@ -23,19 +23,19 @@ kappa <- 1.0 / N
 bmax <- 50
 
 # cost of preference 
-c <- c(0.000)
+c <- c(0.001)
 #c <- 0.8
 
 # clearance rate good plasmid
-loss_gamma <- 0.01
+loss_gamma <- 0.005
 
 # cost of trait
 #epsilon <- c(0.001,0.01, 0.1)
-epsilon <- 0.0
+epsilon <- 0.01
 
 # cost of plasmid
 #delta <- c(0.01,0.1)
-delta <- 0.0
+delta <- 0.01
 
 # conjugation rate 
 #psi <- c(0.01,0.05,0.1) 
@@ -45,7 +45,7 @@ pi_inf <- 0.95
 d <- 0.01 
 
 # recombination rate
-r <- 1e-04 
+r <- 1e-2
 
 # chromosomal integration rate
 tau <- 0.0
@@ -61,7 +61,7 @@ mu_t <- 1e-5
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
 init_p2 <- 0.1
-init_t2 <- 0.4
+init_t2 <- 0.1
 
 # plasmid formation rate
 lambda <- 0.0

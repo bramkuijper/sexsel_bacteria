@@ -542,10 +542,10 @@ void mutate_susceptible(int const genotype)
     assert(Susceptible[genotype].size() > 0);
     assert(Susceptible[genotype].size() <= Ns);
 
-    // check individual indeed susceptible
-    assert(!mutated_ind.has_plasmid)
-
     Individual mutated_ind = Susceptible[genotype][0];
+
+    // check individual indeed susceptible
+    assert(!mutated_ind.has_plasmid);
 
     mutated_ind.p_chr = p_allele_new;
     mutated_ind.t_chr = t_allele_new;

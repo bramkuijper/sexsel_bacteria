@@ -270,7 +270,7 @@ void init_pop()
         genotype_chr = alleles2genotypenr[allele_chr_is_t2][allele_chr_is_p2];
 
         Susceptible[genotype_chr].push_back(init_ind);
-        assert(Susceptible[genotype_chr].size());
+        assert(Susceptible[genotype_chr].size() > 0);
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 
     bool allele_plm_is_p2;
@@ -298,6 +298,7 @@ void init_pop()
         genotype_plasmid = alleles2genotypenr[allele_plm_is_t2][allele_plm_is_p2];
 
         Infected[genotype_chr][genotype_plasmid].push_back(init_ind);
+	assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
     }
 }//end void init_pop() 
 
@@ -501,12 +502,12 @@ void mutate_susceptible(int const genotype)
         case 0: // mutate p, not t
             {
                 p_allele_new = !p_allele;            
-               // t_allele_new = t_allele;            
+                t_allele_new = t_allele;            
                 break;
             }
         case 1: // mutate t, not p
             {
-               // p_allele_new = p_allele;            
+                p_allele_new = p_allele;            
                 t_allele_new = !t_allele;            
                 break;
             }
@@ -706,11 +707,11 @@ void loss_plasmid()
     new_ind.t_chr = geno_has_t2[infected_chr_idx];
     new_ind.has_plasmid = false;
 
-    Susceptible[infected_chr_idx].push_back(new_ind);
-
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
 
     Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
+
+    Susceptible[infected_chr_idx].push_back(new_ind);
 
 }// end loss_plasmid()
 
@@ -809,7 +810,7 @@ void write_data_headers(std::ofstream &data_file)
         << "mean_freq_p2_susceptible;"
         << "mean_freq_p2_infected;"
         << "mean_freq_p2_plasmid;"
-        << "mean_freq_t2_chr;"
+        << "mean_freq_p2_chr;"
         << "mean_freq_t2_total;"
         << "mean_freq_t2_susceptible;"
         << "mean_freq_t2_infected;"
@@ -1084,7 +1085,7 @@ void event_chooser(int const time_step)
     } // end for geno_inf_chr_idx
 
     // 3. loss of plasmid
-    total_rates[3] += gamma_loss * Ni;  // shouldn't this be Ni?
+    total_rates[3] += gamma_loss * Ni;  
 
     // 4. conjugation between infected and infected
     // 16 x 16 = 256 combinations

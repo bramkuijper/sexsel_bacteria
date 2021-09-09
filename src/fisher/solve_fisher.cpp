@@ -1,12 +1,13 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
-#include <ofstream>
 #include <iostream>
+#include <fstream>
 #include "solve_fisher.hpp"
 
 
-void SolveFisher::SolveFisher(int argc, char **argv) :
+SolveFisher::SolveFisher(int argc, char **argv) 
+    :
     S{0.0,0.0,0.0}
     ,I{{0.0,0.0,0.0,0.0}
         ,{0.0,0.0,0.0,0.0}
@@ -21,7 +22,7 @@ void SolveFisher::SolveFisher(int argc, char **argv) :
     ,beta_IxI{}
     ,kappa{0.0}
     ,delta{0.0}
-    ,max_time{0.0}
+    ,max_time{0}
     ,gamma{0.0}
     ,d{0.0}
     ,pi{0.0}
@@ -31,13 +32,16 @@ void SolveFisher::SolveFisher(int argc, char **argv) :
     ,hp{0.0}
     ,mu_t{0.0,0.0}
     ,mu_p{0.0,0.0}
+    ,r{0.0}
     ,a{0.0}
     ,N{0.0}
     ,p2_t0{0.0} 
     ,t2_t0{0.0} 
     ,D_t0{0.0} 
     ,base_name{} 
-    ,allele2genotypes{{t1p1,t1p2},{t2p1,t2p2}} 
+    ,allele2genotypes{{t1p1,t1p2},{t2p1,t2p2}}
+    ,has_p2{false,false,true,true}
+    ,has_t2{false,true,false,true}
 {
     init_arguments(argc, argv);
 }
@@ -81,7 +85,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
         genotype geno = static_cast<genotype>(geno_recip_chr_idx);
 
         // number of t2s on recipient's chromosome (0 or 1)
-        int nt2_recip_chr = geno == p1t2 || geno == t2p2;
+        int nt2_recip_chr = geno == t2p1 || geno == t2p2;
 
         // number of t2s on recipient's chromosome (0 or 1)
         int np2_recip_chr = geno == t1p2 || geno == t2p2;
@@ -101,7 +105,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 static_cast<genotype>(geno_donor_plm_idx);
 
             // count number of t2s on plasmid of donor
-            int nt2_donor_plm = geno_plasmid_donor == p1t2 
+            int nt2_donor_plm = geno_plasmid_donor == t2p1 
                 || geno_plasmid_donor == t2p2;
 
             // count number of p2s on plasmid of donor
@@ -110,7 +114,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
 
             // fecundity of infected
             bI[geno_recip_chr_idx][geno_donor_plm_idx] = 
-                exp(-cp*(np2_recip_chr+np2p) 
+                exp(-cp*(np2_recip_chr+np2_donor_plm) 
                         -ct*(nt2_recip_chr+nt2_donor_plm));
 
             // now loop through chromosomal genotypes of infected
@@ -121,8 +125,6 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 genotype geno_donor_chr = 
                     static_cast<genotype>(geno_donor_chr_idx);
 
-                int nt2_donor_chr = geno_donor_chr == p1t2 || 
-                    geno_donor_chr == t2p2;
                 int nt2_donor_chr = geno_donor_chr == t1p2 || 
                     geno_donor_chr == t2p2;
 
@@ -130,14 +132,15 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 beta_SxI[geno_recip_chr_idx][
                     geno_donor_plm_idx][geno_donor_chr_idx] = 1.0;
 
-                // if choosy and something that looks like an orament
-                if (np2_recip_chr == 1 && nt2_donor_plm + nt2_donor_chr > 0)
+                // if recipient is choosy on either chrom or plasmid
+                // and something in donor that looks like an orament
+                if (np2_recip_chr > 0 && nt2_donor_plm + nt2_donor_chr > 0)
                 {
                     beta_SxI[geno_recip_chr_idx][geno_donor_plm_idx][geno_donor_chr_idx] += 
-                        nt2_donor_plm + n_t2chr == 1 ? 
+                        nt2_donor_plm + (nt2_donor_chr == 1.0 ? 
                             ht * a // donor heterozygous t1 t2
                             :
-                            a; // donor homozygous
+                            a); // donor homozygous
                 }
 
                 for (int geno_recip_plm_idx = 0; 
@@ -146,7 +149,6 @@ void SolveFisher::init_arguments(int argc, char **argv)
                     genotype geno_recip_plm = 
                         static_cast<genotype>(geno_recip_plm_idx);
 
-                    int nt2_recip_plm = geno_recip_plm == t2p1 || geno_recip_plm == t2p2;
                     int np2_recip_plm = geno_recip_plm == t1p2 || geno_recip_plm == t2p2;
 
                     // infection rate from the perspective of an infected recipient
@@ -284,12 +286,112 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
         << "D_t0;" << D_t0 << std::endl;
 }// end write_parameters
 
+// write headers of the data file
+void SolveFisher::write_data_headers(std::ofstream &data_file)
+{
+    data_file << "time;";
+
+    for (int chr_idx = 0; chr_idx < 4; ++chr_idx)
+    {
+        data_file << "St" 
+            << (1 + has_t2[chr_idx]) 
+            << "p"
+            << (1 + has_p2[chr_idx]) 
+            << ";";
+
+        for (int plm_idx = 0; plm_idx < 4; ++plm_idx)
+        {
+            data_file << "It"
+                << (1 + has_t2[chr_idx]) 
+                << "p"
+                << (1 + has_p2[chr_idx]) 
+                << "t"
+                << (1 + has_t2[plm_idx]) 
+                << "p"
+                << (1 + has_p2[plm_idx]) 
+                << ";";
+        }
+    }
+
+    data_file << "S;I;N;"
+                << "p2;p2_chr;p2_plm;"
+                << "t2;t2_chr;t2_plm;";
+    data_file << std::endl;
+} // end SolveFisher::write_data_headers()
+
+// writes data to output file
+void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
+{
+    data_file << time_step << ";";
+
+    double total_S = 0.0;
+    double total_I = 0.0;
+
+    int p2 = 0;
+    int p2_plm = 0;
+    int p2_chr = 0;
+    
+    int t2 = 0;
+    int t2_plm = 0;
+    int t2_chr = 0;
+
+    for (int chr_idx = 0; chr_idx < 4; ++chr_idx)
+    {
+        data_file << S[chr_idx] << ";";
+
+        total_S += S[chr_idx];
+
+        if (has_p2[chr_idx])
+        {
+            p2 += S[chr_idx];
+            p2_chr += S[chr_idx];
+        }
+
+        if (has_t2[chr_idx])
+        {
+            t2 += S[chr_idx];
+            t2_chr += S[chr_idx];
+        }
+
+        for (int plm_idx = 0; plm_idx < 4; ++plm_idx)
+        {
+            data_file << I[chr_idx][plm_idx] << ";";
+            total_I += I[chr_idx][plm_idx];
+
+            if (has_p2[plm_idx])
+            {
+                p2 += I[chr_idx][plm_idx];
+                p2_chr += I[chr_idx][plm_idx];
+            }
+
+            if (has_t2[plm_idx])
+            {
+                t2 += I[chr_idx][plm_idx];
+                t2_chr += I[chr_idx][plm_idx];
+            }
+        }
+    }
+
+    data_file << total_S << ";" 
+        << total_I << ";" 
+        << total_S + total_I << ";";
+
+    data_file << (double)p2 / (total_S + 2*total_I) << ";";
+    data_file << (double)p2_chr / total_S << ";";
+    data_file << (double)p2_plm / total_I << ";";
+
+    data_file << (double)t2 / (total_S + 2*total_I) << ";";
+    data_file << (double)t2_chr / total_S << ";";
+    data_file << (double)t2_plm / total_I << ";";
+
+} // SolveFisher::write_data()
+
 // attempt to numerically solve the 
 // system of differential equations
 void SolveFisher::solveSys()
 {
     double dSdt[4];
-    double dIdt[4];
+    double dIdt[4][4];
 
     bool converged;
 
@@ -297,6 +399,7 @@ void SolveFisher::solveSys()
 
     // write parameters to output file
     write_parameters(output_file);
+
 
     for (int time_idx = 0; time_idx < max_time; ++time_idx)
     {
@@ -315,7 +418,10 @@ void SolveFisher::solveSys()
         double total_force_of_infection_IxI[4][4][4][4];
 
         // recombination between chromosome and plasmid in infected individuals;
-        double recombination[4][4];
+        double recombination_in[4][4];
+        double recombination_out[4][4];
+
+        double total_recombination = 0.0;
 
         // reset population size (N) 
         // count and update it
@@ -343,8 +449,12 @@ void SolveFisher::solveSys()
 
                 sum_plasmid_loss[genotype_chr_idx] += 
                     gamma * I[genotype_chr_idx][genotype_plm_idx];
+            
+                recombination_in[genotype_chr_idx][genotype_plm_idx] = 
+                    recombination_in[genotype_chr_idx][genotype_plm_idx] = 0.0;
             }
             assert(sum_plasmid_loss[genotype_chr_idx] >= 0);
+
         }
 
         assert(N > 0);
@@ -374,7 +484,9 @@ void SolveFisher::solveSys()
                             genotypeI_chromosome_idx][genotypeI_plasmid_idx
                             ] * I[genotypeI_chromosome_idx][genotypeI_plasmid_idx] / N;
                 }
+
             }
+
         }
 
         // then calculate the infected x infected rate
@@ -386,6 +498,40 @@ void SolveFisher::solveSys()
             // level 2 recipient plasmid
             for (int geno_recip_plm_idx = 0; geno_recip_plm_idx < 4; ++geno_recip_plm_idx)
             {
+                bool p2_chr = has_p2[geno_recip_chr_idx];
+                bool p2_plm = has_p2[geno_recip_plm_idx];
+                bool t2_chr = has_t2[geno_recip_chr_idx];
+                bool t2_plm = has_t2[geno_recip_plm_idx];
+
+                // only recombination if alleles on both chromosomes are different
+                if (p2_chr != p2_plm && t2_chr != t2_plm)
+                {
+                    // two types of influx
+                    // if this is t1p1 x t2p2 we have
+                    // t2p1 and t1p2, each with freq 1/2 * r
+                    genotype recombinant1 = allele2genotypes[p2_chr][t2_plm];
+                    genotype recombinant2 = allele2genotypes[p2_plm][t2_chr];
+
+                    // influx of infecteds with genotype 
+                    // I[geno_recip_chr_idx][geno_recip_plm_idx]
+                    // due to recombination
+                    //
+                    // note the 1/2 there, as only half of the recombinants will 
+                    // have the desired combination of [tx py] [tz pv] on chromosome
+                    // and plasmid respectively, the other half will have 
+                    // [tz pv] [tx py] on chromosome and plasmid respectively
+                    recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] +=
+                        0.5 * r * (I[recombinant1][recombinant2] +
+                                I[recombinant2][recombinant1]);
+
+                    recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] -= 
+                        r * I[geno_recip_chr_idx][geno_recip_plm_idx];
+
+                            total_recombination += 
+                                recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] 
+                                + recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
+                }
+
                 // level 3: donor chromosome
                 for (int geno_donor_chr_idx = 0; 
                         geno_donor_chr_idx < 4; ++geno_donor_chr_idx)
@@ -412,6 +558,8 @@ void SolveFisher::solveSys()
                 }
             }
         }
+        
+        assert(fabs(total_recombination) < 1e-07);
 
         double total_mutations = 0.0;
 
@@ -439,8 +587,8 @@ void SolveFisher::solveSys()
 
             // check that total sum of mutations is indeed zero
             // (for the sake of debugging)
-            total_mutations += mu_t[!t2] * S[geno_chr_oppP] + mu_p[!p2] * S[geno_chr_oppP];
-            total_mutations -= (mu_t[t2] + mu_p[p2]) * S[genotype_idx];
+            total_mutations += mu_t[!is_t2] * S[geno_chr_oppP] + mu_p[!is_p2] * S[geno_chr_oppP];
+            total_mutations -= (mu_t[is_t2] + mu_p[is_p2]) * S[genotype_idx];
 
             // dSdt
             dSdt[genotype_idx] = 
@@ -457,12 +605,10 @@ void SolveFisher::solveSys()
                 - (mu_t[is_t2] + mu_p[is_p2]) * S[genotype_idx] 
                 
                 // 5. loss due to deaths
-                - d * S[genotype_idx] +   
+                - d * S[genotype_idx] 
                 
                 // 6. loss due to infections
-                - (1-pi) * total_force_of_infection[genotype_idx] * S[genotype_idx]; 
-
-                // 7. TODO: recombination
+                - (1-pi) * total_force_of_infection_lossS[genotype_idx] * S[genotype_idx]; 
 
             for (int plasmid_idx = 0; plasmid_idx < 3; ++plasmid_idx)
             {
@@ -521,7 +667,11 @@ void SolveFisher::solveSys()
                         I[genotype_idx][plasmid_idx]
 
                     // 4. loss in infecteds
-                    - (d + gamma) * I[genotype_idx][plasmid_idx];
+                    - (d + gamma) * I[genotype_idx][plasmid_idx]
+
+                    // 5. recombination
+                    + recombination_in[genotype_idx][plasmid_idx]
+                        - recombination_out[genotype_idx][plasmid_idx];
 
             } // end for plasmid_idx
 
@@ -555,7 +705,7 @@ void SolveFisher::solveSys()
    
         if (time_idx % skip_output == 0)
         {
-            write_data(output_file);
+            write_data(output_file, time_idx);
         }
 
         if (converged)

@@ -3,7 +3,7 @@
 
 #include <string>
 #include <iostream>
-#include <ofstream>
+#include <fstream>
 
 
 enum genotype {
@@ -22,8 +22,8 @@ class SolveFisher
     private:
         // vanish boundary below which we consider that there
         // is no change in x(t+1) - x(t)
-        static double vanish_bound{1e-07};
-        static double eul{0.01};
+        static constexpr double vanish_bound{1e-07};
+        static constexpr double eul{0.01};
 
         void init_arguments(int argc, char ** argv);
 
@@ -45,13 +45,14 @@ class SolveFisher
         // infection rates with I recipient and I donor
         double beta_IxI[4][4][4][4];
 
-        int max_time;
+        long int max_time;
         double kappa;
         double gamma;
         double d;
         double delta;
         double ht;
         double hp;
+        double r;
         double a;
         double mu_t[2];
         double mu_p[2];
@@ -72,6 +73,8 @@ class SolveFisher
         // initial freq of linkage disequilibrium
         double D_t0;
 
+        int skip_output;
+
         std::string base_name;
 
         // array to translate boolean allelic values to genotype
@@ -79,10 +82,15 @@ class SolveFisher
         // second index: pi
         genotype allele2genotypes[2][2];
 
-        write_parameters(std::ofstream &data_file);
+        bool has_p2[4];
+        bool has_t2[4];
+
+        void write_parameters(std::ofstream &data_file);
+        void write_data(std::ofstream &data_file, int const time_step);
+        void write_data_headers(std::ofstream &data_file);
 
     public :
-        SolveFisher(int argc, char ** argv); // c'tor
+        SolveFisher(int argc, char **argv); // c'tor
 
         // solve the system of differential equations
         void solveSys();

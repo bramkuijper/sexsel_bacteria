@@ -3,7 +3,7 @@
 
 #include <string>
 #include <iostream>
-#include <ofstream>
+#include <fstream>
 
 
 enum genotype {
@@ -45,7 +45,7 @@ class SolveFisher
         // infection rates with I recipient and I donor
         double beta_IxI[4][4][4][4];
 
-        int max_time;
+        long int max_time;
         double kappa;
         double gamma;
         double d;
@@ -72,6 +72,8 @@ class SolveFisher
         // initial freq of linkage disequilibrium
         double D_t0;
 
+        int skip_output;
+
         std::string base_name;
 
         // array to translate boolean allelic values to genotype
@@ -79,7 +81,11 @@ class SolveFisher
         // second index: pi
         genotype allele2genotypes[2][2];
 
-        write_parameters(std::ofstream &data_file);
+        bool has_p2[4];
+        bool has_t2[4];
+
+        void write_parameters(std::ofstream &data_file);
+        void write_data(std::ofstream &data_file);
 
     public :
         SolveFisher(int argc, char ** argv); // c'tor

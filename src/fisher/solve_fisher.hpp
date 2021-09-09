@@ -22,8 +22,8 @@ class SolveFisher
     private:
         // vanish boundary below which we consider that there
         // is no change in x(t+1) - x(t)
-        static double vanish_bound{1e-07};
-        static double eul{0.01};
+        static constexpr double vanish_bound{1e-07};
+        static constexpr double eul{0.01};
 
         void init_arguments(int argc, char ** argv);
 
@@ -52,6 +52,7 @@ class SolveFisher
         double delta;
         double ht;
         double hp;
+        double r;
         double a;
         double mu_t[2];
         double mu_p[2];
@@ -88,7 +89,7 @@ class SolveFisher
         void write_data(std::ofstream &data_file);
 
     public :
-        SolveFisher(int argc, char ** argv); // c'tor
+        SolveFisher(int argc, char **argv); // c'tor
 
         // solve the system of differential equations
         void solveSys();

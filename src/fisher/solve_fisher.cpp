@@ -6,7 +6,8 @@
 #include "solve_fisher.hpp"
 
 
-void SolveFisher::SolveFisher(int argc, char **argv) :
+SolveFisher::SolveFisher(int argc, char **argv) 
+    :
     S{0.0,0.0,0.0}
     ,I{{0.0,0.0,0.0,0.0}
         ,{0.0,0.0,0.0,0.0}
@@ -21,7 +22,7 @@ void SolveFisher::SolveFisher(int argc, char **argv) :
     ,beta_IxI{}
     ,kappa{0.0}
     ,delta{0.0}
-    ,max_time{0.0}
+    ,max_time{0}
     ,gamma{0.0}
     ,d{0.0}
     ,pi{0.0}
@@ -31,6 +32,7 @@ void SolveFisher::SolveFisher(int argc, char **argv) :
     ,hp{0.0}
     ,mu_t{0.0,0.0}
     ,mu_p{0.0,0.0}
+    ,r{0.0}
     ,a{0.0}
     ,N{0.0}
     ,p2_t0{0.0} 
@@ -83,7 +85,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
         genotype geno = static_cast<genotype>(geno_recip_chr_idx);
 
         // number of t2s on recipient's chromosome (0 or 1)
-        int nt2_recip_chr = geno == p1t2 || geno == t2p2;
+        int nt2_recip_chr = geno == t2p1 || geno == t2p2;
 
         // number of t2s on recipient's chromosome (0 or 1)
         int np2_recip_chr = geno == t1p2 || geno == t2p2;
@@ -103,7 +105,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 static_cast<genotype>(geno_donor_plm_idx);
 
             // count number of t2s on plasmid of donor
-            int nt2_donor_plm = geno_plasmid_donor == p1t2 
+            int nt2_donor_plm = geno_plasmid_donor == t2p1 
                 || geno_plasmid_donor == t2p2;
 
             // count number of p2s on plasmid of donor
@@ -112,7 +114,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
 
             // fecundity of infected
             bI[geno_recip_chr_idx][geno_donor_plm_idx] = 
-                exp(-cp*(np2_recip_chr+np2p) 
+                exp(-cp*(np2_recip_chr+np2_donor_plm) 
                         -ct*(nt2_recip_chr+nt2_donor_plm));
 
             // now loop through chromosomal genotypes of infected
@@ -122,9 +124,6 @@ void SolveFisher::init_arguments(int argc, char **argv)
             {
                 genotype geno_donor_chr = 
                     static_cast<genotype>(geno_donor_chr_idx);
-
-                int nt2_donor_chr = geno_donor_chr == p1t2 || 
-                    geno_donor_chr == t2p2;
 
                 int nt2_donor_chr = geno_donor_chr == t1p2 || 
                     geno_donor_chr == t2p2;
@@ -138,7 +137,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 if (np2_recip_chr > 0 && nt2_donor_plm + nt2_donor_chr > 0)
                 {
                     beta_SxI[geno_recip_chr_idx][geno_donor_plm_idx][geno_donor_chr_idx] += 
-                        nt2_donor_plm + (n_t2_donor chr == 1.0 ? 
+                        nt2_donor_plm + (nt2_donor_chr == 1.0 ? 
                             ht * a // donor heterozygous t1 t2
                             :
                             a); // donor homozygous
@@ -150,7 +149,6 @@ void SolveFisher::init_arguments(int argc, char **argv)
                     genotype geno_recip_plm = 
                         static_cast<genotype>(geno_recip_plm_idx);
 
-                    int nt2_recip_plm = geno_recip_plm == t2p1 || geno_recip_plm == t2p2;
                     int np2_recip_plm = geno_recip_plm == t1p2 || geno_recip_plm == t2p2;
 
                     // infection rate from the perspective of an infected recipient
@@ -320,7 +318,10 @@ void SolveFisher::solveSys()
         double total_force_of_infection_IxI[4][4][4][4];
 
         // recombination between chromosome and plasmid in infected individuals;
-        double recombination[4][4];
+        double recombination_in[4][4];
+        double recombination_out[4][4];
+
+        double total_recombination = 0.0;
 
         // reset population size (N) 
         // count and update it
@@ -348,8 +349,12 @@ void SolveFisher::solveSys()
 
                 sum_plasmid_loss[genotype_chr_idx] += 
                     gamma * I[genotype_chr_idx][genotype_plm_idx];
+            
+                recombination_in[genotype_chr_idx][genotype_plm_idx] = 
+                    recombination_in[genotype_chr_idx][genotype_plm_idx] = 0.0;
             }
             assert(sum_plasmid_loss[genotype_chr_idx] >= 0);
+
         }
 
         assert(N > 0);
@@ -407,14 +412,25 @@ void SolveFisher::solveSys()
                     genotype recombinant1 = allele2genotypes[p2_chr][t2_plm];
                     genotype recombinant2 = allele2genotypes[p2_plm][t2_chr];
 
-
+                    // influx of infecteds with genotype 
+                    // I[geno_recip_chr_idx][geno_recip_plm_idx]
+                    // due to recombination
+                    //
+                    // note the 1/2 there, as only half of the recombinants will 
+                    // have the desired combination of [tx py] [tz pv] on chromosome
+                    // and plasmid respectively, the other half will have 
+                    // [tz pv] [tx py] on chromosome and plasmid respectively
                     recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] +=
-                        0.5 * r * recombination[geno_recip_chr_idx][geno_recip_plm_idx];
+                        0.5 * r * (I[recombinant1][recombinant2] +
+                                I[recombinant2][recombinant1]);
 
-                    recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] -=
+                    recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] -= 
+                        r * I[geno_recip_chr_idx][geno_recip_plm_idx];
 
+                            total_recombination += 
+                                recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] 
+                                + recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
                 }
-
 
                 // level 3: donor chromosome
                 for (int geno_donor_chr_idx = 0; 
@@ -442,6 +458,8 @@ void SolveFisher::solveSys()
                 }
             }
         }
+        
+        assert(fabs(total_recombination) < 1e-07);
 
         double total_mutations = 0.0;
 
@@ -549,7 +567,11 @@ void SolveFisher::solveSys()
                         I[genotype_idx][plasmid_idx]
 
                     // 4. loss in infecteds
-                    - (d + gamma) * I[genotype_idx][plasmid_idx];
+                    - (d + gamma) * I[genotype_idx][plasmid_idx]
+
+                    // 5. recombination
+                    + recombination_in[genotype_idx][plasmid_idx]
+                        - recombination_out[genotype_idx][plasmid_idx];
 
             } // end for plasmid_idx
 

@@ -108,7 +108,8 @@ double mu_p = 0.0;
 
 double mu_t = 0.0;
 
-// ornament biased mutation rate
+// the rate at which t2 turns to t1 
+// aka ornament biased mutation rate
 double nu = 0.0;
 
 // dominance coefficient 

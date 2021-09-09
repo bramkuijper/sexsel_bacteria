@@ -104,7 +104,9 @@ double r = 0.0;
 // preference, ornament mutation rate
 // the rate at which p1 turns to p2 and vice-versa
 // the rate at which t1 turns to t2 
-double mu = 0.0;
+double mu_p = 0.0;
+
+double mu_t = 0.0;
 
 // ornament biased mutation rate
 double nu = 0.0;
@@ -372,14 +374,27 @@ void mutate_infected(int const genotype_chr
     assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
 
     // mutation bias?
-    double mu_t_chr = geno_has_t2[genotype_chr] ? nu : mu;
-    double mu_t_plasmid = geno_has_t2[genotype_plasmid] ? nu : mu;
+    double mu_t_chr = geno_has_t2[genotype_chr] ? nu : mu_t;
+    double mu_t_plasmid = geno_has_t2[genotype_plasmid] ? nu : mu_t;
 
-    double mu_p_ny[2] = {1.0 - mu, mu};
+    // what are the rates if a p allele (on either plasmid or chromosome)
+    // - does not mutate
+    // - mutates
+    double mu_p_ny[2] = {1.0 - mu_p, mu_p};
+
+    // what are the rates if a t allele on a chromosome
+    // - does not mutate
+    // - mutates
     double mu_t_chr_ny[2] = {1.0 - mu_t_chr, mu_t_chr};
+
+    // what are the rates if a t allele on a plasmid
+    // - does not mutate
+    // - mutates
     double mu_t_plasmid_ny[2] = {1.0 - mu_t_plasmid, mu_t_plasmid};
 
-    double total_mu = 1.0 - (1.0 - mu)*(1.0 - mu) * (1.0 - mu_t_chr) * (1.0 - mu_t_plasmid);
+    // total rate in case at least 1 or more mutations happen
+    // which is 1 minus the prob that 0 mutations happen
+    double total_mu = 1.0 - (1.0 - mu_p)*(1.0 - mu_p) * (1.0 - mu_t_chr) * (1.0 - mu_t_plasmid);
 
     // draw a sample from cumulative distribution
     double random_cumul_sample = uniform(rng_r) * total_mu;
@@ -466,6 +481,7 @@ void mutate_infected(int const genotype_chr
     assert(std::fabs(cumul_sum_mut - total_mu) < 1.0e-07);
 } // end mutate_infected()
 
+// mutate a susceptible individual
 void mutate_susceptible(int const genotype)
 {
     assert(genotype >= 0);
@@ -474,14 +490,14 @@ void mutate_susceptible(int const genotype)
     std::vector<double> mutation_probs;
 
     // mutation bias?
-    double mu_t = geno_has_t2[genotype] ? nu : mu;
+    double mu_t_this_genotype = geno_has_t2[genotype] ? nu : mu_t;
 
     // option 1: mutate p but not t
-    mutation_probs.push_back(mu * (1.0 - mu_t));
+    mutation_probs.push_back(mu_p * (1.0 - mu_t_this_genotype));
     // option 2: mutate t but not p
-    mutation_probs.push_back((1.0 - mu) * mu_t);
+    mutation_probs.push_back((1.0 - mu_p) * mu_t_this_genotype);
     // option 3: mutate both
-    mutation_probs.push_back(mu * mu_t);
+    mutation_probs.push_back(mu_p * mu_t_this_genotype);
 
     std::discrete_distribution <int> mutation_dist(
             mutation_probs.begin()
@@ -525,12 +541,17 @@ void mutate_susceptible(int const genotype)
     assert(Susceptible[genotype].size() > 0);
     assert(Susceptible[genotype].size() <= Ns);
 
+    // check individual indeed susceptible
+    assert(!mutated_ind.has_plasmid)
+
     Individual mutated_ind = Susceptible[genotype][0];
 
     mutated_ind.p_chr = p_allele_new;
     mutated_ind.t_chr = t_allele_new;
 
+    // remove unmutated individual
     Susceptible[genotype].pop_back();
+
     Susceptible[alleles2genotypenr[t_allele_new][p_allele_new]].push_back(mutated_ind);
 }
 
@@ -551,15 +572,16 @@ void init_arguments(int argc, char ** argv)
     lambda = atof(argv[11]);
     d = atof(argv[12]);
     r = atof(argv[13]);
-    mu = atof(argv[14]);
-    nu = atof(argv[15]);
-    init_p2 = atof(argv[16]);
-    init_t2 = atof(argv[17]);
-    alpha = atof(argv[18]);
-    h = atof(argv[19]);
-    l = atof(argv[20]);
-    N = atof(argv[21]);
-    base_name = argv[22];
+    mu_p = atof(argv[14]);
+    mu_t = atof(argv[15]);
+    nu = atof(argv[16]);
+    init_p2 = atof(argv[17]);
+    init_t2 = atof(argv[18]);
+    alpha = atof(argv[19]);
+    h = atof(argv[20]);
+    l = atof(argv[21]);
+    N = atof(argv[22]);
+    base_name = argv[23];
 
   // for homozygote (at preference allele) recipients 
     attr_homz_recip[0] = 1.0; // attractiveness individual without ornament
@@ -593,7 +615,7 @@ void write_parameters(std::ofstream &data_file)
         << "bmax" << ";" << bmax << std::endl
         << "c" << ";" << c << std::endl
         << "alpha" << ";" << alpha << std::endl
-	<< "epsilon" << ";" << epsilon << std::endl
+        << "epsilon" << ";" << epsilon << std::endl
         << "delta" << ";" << delta << std::endl
         << "gamma" << ";" << gamma_loss  << std::endl
         << "pi" << ";" << pi << std::endl
@@ -602,24 +624,16 @@ void write_parameters(std::ofstream &data_file)
         << "d" << ";" << d << std::endl
         << "r" << ";" << r << std::endl
         << "seed" << ";" << seed << std::endl
-        << "mu" << ";" << mu << std::endl
+        << "mu_p" << ";" << mu_p << std::endl
+        << "mu_t" << ";" << mu_t << std::endl
         << "nu" << ";" << nu << std::endl
         << "init_p2" << ";" << init_p2 << std::endl
         << "init_t2" << ";" << init_t2 << std::endl
         << "n_plasmid_init" << ";" << n_plasmid_init << std::endl
-	<< "h" << ";" << h << std::endl
-	<< "l" << ";" << l << std::endl;
-
+        << "h" << ";" << h << std::endl
+        << "l" << ";" << l << std::endl;
 } // end write_parameters()
 
-
-// if mutation occurs 
-// turn allele p1 into p2 and vice-versa
-// same for trait locus
-bool mutation(double const mu, bool const myallele)
-{
-    return(uniform(rng_r) < mu ? !myallele : myallele);
-}
 
 // infection event of a susceptible 
 // by conjugation with infected individual 
@@ -889,7 +903,7 @@ void event_chooser(int const time_step)
     // 7. mutation susceptible
     // 8. mutation infected
     //      - in t2 at rate nu
-    //      - in t1, p1 and p2 at rate mu
+    //      - in t1, p1 and p2 at rate mu_p,mu_t
     //      - more likely in infecteds as they carry more loci 
     // 9. recombination among plasmid and chromosome in 
     //      obvz an infected individual
@@ -1003,8 +1017,8 @@ void event_chooser(int const time_step)
         //
         // probability of at least 1 mutation is 
         // 1 - (1-mu_p)*(1-mu_t)
-        total_mu = (1.0 - (1.0 - mu) * 
-            (1.0 - (geno_has_t2[geno_sus_chr_idx] ? nu : mu))) * 
+        total_mu = (1.0 - (1.0 - mu_p) * 
+            (1.0 - (geno_has_t2[geno_sus_chr_idx] ? nu : mu_t))) * 
                 Susceptible[geno_sus_chr_idx].size();
         
         mutation_susceptible.push_back(total_mu);
@@ -1049,9 +1063,9 @@ void event_chooser(int const time_step)
             // probability of at least 1 mutation 
             // 1 - (1-mu_p)^2*(1-mu_t)^2
             total_mu = (1.0 - 
-                    (1.0 - mu)*(1.0-mu) * 
-                        (1.0 - (geno_has_t2[geno_inf_chr_idx] ? nu : mu)) *
-                        (1.0 - (geno_has_t2[geno_inf_plasmid_idx] ? nu : mu))) *
+                    (1.0 - mu_p)*(1.0-mu_p) * 
+                        (1.0 - (geno_has_t2[geno_inf_chr_idx] ? nu : mu_t)) *
+                        (1.0 - (geno_has_t2[geno_inf_plasmid_idx] ? nu : mu_t))) *
                             Infected[geno_inf_chr_idx][geno_inf_plasmid_idx].size();
 
             mutation_infected.push_back(total_mu);

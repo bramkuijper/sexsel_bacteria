@@ -42,6 +42,9 @@ void SolveFisher::SolveFisher(int argc, char **argv) :
     init_arguments(argc, argv);
 }
 
+// initialize arguments from the command line
+// and fill vectors that are functions of basic 
+// parameters
 void SolveFisher::init_arguments(int argc, char **argv)
 {
     kappa = atof(argv[1]);
@@ -94,7 +97,8 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 ++geno_donor_plm_idx)
         {
             // get plasmid genotype of donor
-            genotype geno_plasmid_donor = static_cast<genotype>(geno_donor_plm_idx);
+            genotype geno_plasmid_donor = 
+                static_cast<genotype>(geno_donor_plm_idx);
 
             // count number of t2s on plasmid of donor
             int nt2_donor_plm = geno_plasmid_donor == p1t2 
@@ -106,7 +110,8 @@ void SolveFisher::init_arguments(int argc, char **argv)
 
             // fecundity of infected
             bI[geno_recip_chr_idx][geno_donor_plm_idx] = 
-                exp(-cp*(np2_recip_chr+np2p) -ct*(nt2_recip_chr+nt2_donor_plm));
+                exp(-cp*(np2_recip_chr+np2p) 
+                        -ct*(nt2_recip_chr+nt2_donor_plm));
 
             // now loop through chromosomal genotypes of infected
             // and calculate infection rates
@@ -116,11 +121,14 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 genotype geno_donor_chr = 
                     static_cast<genotype>(geno_donor_chr_idx);
 
-                int nt2_donor_chr = geno_donor_chr == p1t2 || geno_donor_chr == t2p2;
-                int nt2_donor_chr = geno_donor_chr == t1p2 || geno_donor_chr == t2p2;
+                int nt2_donor_chr = geno_donor_chr == p1t2 || 
+                    geno_donor_chr == t2p2;
+                int nt2_donor_chr = geno_donor_chr == t1p2 || 
+                    geno_donor_chr == t2p2;
 
                 // by default set the infection rate to 0
-                beta_SxI[geno_recip_chr_idx][geno_donor_plm_idx][geno_donor_chr_idx] = 1.0;
+                beta_SxI[geno_recip_chr_idx][
+                    geno_donor_plm_idx][geno_donor_chr_idx] = 1.0;
 
                 // if choosy and something that looks like an orament
                 if (np2_recip_chr == 1 && nt2_donor_plm + nt2_donor_chr > 0)

@@ -55,7 +55,8 @@ tau <- 0.0
 #mu_t <- c(0.001,0.01)
 
 mu_p <- 1e-6
-mu_t <- 1e-5 
+mu_t <- 1e-6
+mu_t2 <- 1e-5 
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
@@ -130,6 +131,7 @@ combinations <- as.data.frame(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
+                ,mu_t2=mu_t2
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha
@@ -225,6 +227,7 @@ summarize.params(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
+                ,mu_t2=mu_t2
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha

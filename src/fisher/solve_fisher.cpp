@@ -286,6 +286,106 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
         << "D_t0;" << D_t0 << std::endl;
 }// end write_parameters
 
+// write headers of the data file
+void SolveFisher::write_data_headers(std::ofstream &data_file)
+{
+    data_file << "time;";
+
+    for (int chr_idx = 0; chr_idx < 4; ++chr_idx)
+    {
+        data_file << "St" 
+            << (1 + has_t2[chr_idx]) 
+            << "p"
+            << (1 + has_p2[chr_idx]) 
+            << ";";
+
+        for (int plm_idx = 0; plm_idx < 4; ++plm_idx)
+        {
+            data_file << "It"
+                << (1 + has_t2[chr_idx]) 
+                << "p"
+                << (1 + has_p2[chr_idx]) 
+                << "t"
+                << (1 + has_t2[plm_idx]) 
+                << "p"
+                << (1 + has_p2[plm_idx]) 
+                << ";";
+        }
+    }
+
+    data_file << "S;I;N;"
+                << "p2;p2_chr;p2_plm;"
+                << "t2;t2_chr;t2_plm;";
+    data_file << std::endl;
+} // end SolveFisher::write_data_headers()
+
+// writes data to output file
+void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
+{
+    data_file << time_step << ";";
+
+    double total_S = 0.0;
+    double total_I = 0.0;
+
+    int p2 = 0;
+    int p2_plm = 0;
+    int p2_chr = 0;
+    
+    int t2 = 0;
+    int t2_plm = 0;
+    int t2_chr = 0;
+
+    for (int chr_idx = 0; chr_idx < 4; ++chr_idx)
+    {
+        data_file << S[chr_idx] << ";";
+
+        total_S += S[chr_idx];
+
+        if (has_p2[chr_idx])
+        {
+            p2 += S[chr_idx];
+            p2_chr += S[chr_idx];
+        }
+
+        if (has_t2[chr_idx])
+        {
+            t2 += S[chr_idx];
+            t2_chr += S[chr_idx];
+        }
+
+        for (int plm_idx = 0; plm_idx < 4; ++plm_idx)
+        {
+            data_file << I[chr_idx][plm_idx] << ";";
+            total_I += I[chr_idx][plm_idx];
+
+            if (has_p2[plm_idx])
+            {
+                p2 += I[chr_idx][plm_idx];
+                p2_chr += I[chr_idx][plm_idx];
+            }
+
+            if (has_t2[plm_idx])
+            {
+                t2 += I[chr_idx][plm_idx];
+                t2_chr += I[chr_idx][plm_idx];
+            }
+        }
+    }
+
+    data_file << total_S << ";" 
+        << total_I << ";" 
+        << total_S + total_I << ";";
+
+    data_file << (double)p2 / (total_S + 2*total_I) << ";";
+    data_file << (double)p2_chr / total_S << ";";
+    data_file << (double)p2_plm / total_I << ";";
+
+    data_file << (double)t2 / (total_S + 2*total_I) << ";";
+    data_file << (double)t2_chr / total_S << ";";
+    data_file << (double)t2_plm / total_I << ";";
+
+} // SolveFisher::write_data()
+
 // attempt to numerically solve the 
 // system of differential equations
 void SolveFisher::solveSys()
@@ -605,7 +705,7 @@ void SolveFisher::solveSys()
    
         if (time_idx % skip_output == 0)
         {
-            write_data(output_file);
+            write_data(output_file, time_idx);
         }
 
         if (converged)

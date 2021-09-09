@@ -86,7 +86,8 @@ class SolveFisher
         bool has_t2[4];
 
         void write_parameters(std::ofstream &data_file);
-        void write_data(std::ofstream &data_file);
+        void write_data(std::ofstream &data_file, int const time_step);
+        void write_data_headers(std::ofstream &data_file);
 
     public :
         SolveFisher(int argc, char **argv); // c'tor

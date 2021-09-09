@@ -6,6 +6,8 @@
 # and then try
 # ./plot_single_simulation.r output_file.csv
 
+# get rid of everything there
+rm(list=ls())
 # ggplot2 graphics library
 library("ggplot2")
 
@@ -116,6 +118,12 @@ for (f_idx in 1:length(files))
 	{
 	    the.data <- the.data[seq(1,nrow(the.data),100), ]
 	}
+	mytheme <- theme_classic() + 
+		   theme(axis.text = element_text(size=14), 
+		   axis.title=element_text(size=14), 
+		   legend.title = element_text(size=14), 
+		   legend.text = element_text(size=14))  
+
 	# now use ggplot2 to plot stuff
 	# If no previous exposure to ggplot2, find one's own way of plotting
 	# or read the manual at https://ggplot2.tidyverse.org/ 
@@ -125,7 +133,7 @@ for (f_idx in 1:length(files))
 		,aes(x=time)) +
 		    geom_line(aes(y = Ns, colour="Susceptible")) +
 		    geom_line(aes(y = Ni, colour = "Infected")) + 
-		    theme_classic() + 
+		    mytheme + 
 		    xlab("Generation") + 
 		    #ylim(c(0,10)) +
 		    ylab("Pop size")
@@ -133,72 +141,90 @@ for (f_idx in 1:length(files))
 	p2 <- ggplot(data=the.data
 		,aes(x=time)) +
 		    geom_line(aes(y = mean_freq_p2_total, colour="Overall frequency p2")) +
-		    theme_classic() + 
+		    geom_line(aes(y = mean_freq_t2_total, colour="Overall frequency t2")) +
+		    mytheme + 
 		    xlab("Generation") + 
-		    ylab("Mean p2 frequency") +
+		    ylab("Overall allele frequencies") +
 		    ylim(0,1)
 		    
 	p3 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_t2_total, colour="Overall frequency t2")) +
-		    theme_classic() + 
+		    geom_line(aes(y = mean_freq_p2_susceptible, colour="Freq p2 Susceptible")) +
+		    geom_line(aes(y = mean_freq_t2_susceptible, colour="Freq t2 susceptible")) +
 		    xlab("Generation") + 
-		    ylab("Mean t2 frequency") +
-		    ylim(0,1)
+		    ylab("Alle frequencies in Susceptibles") +
+		    ylim(0,1) +
+		    mytheme  
 
 	p4 <- ggplot(data=the.data
 		,aes(x=time)) +
 		    geom_line(aes(y = mean_freq_p2_infected, colour="Freq p2 infected")) +
-		    theme_classic() + 
+		    geom_line(aes(y = mean_freq_t2_infected, colour="Freq t2 infected")) +
 		    xlab("Generation") + 
-		    ylab("Mean p2 frequency infected") +
-		    ylim(0,1)
+		    ylab("Allele frequencies in Infected") +
+		    ylim(0,1) +
+		    mytheme  
 
 	p5 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_t2_infected, colour="Freq t2 infected")) +
-		    theme_classic() + 
+		    geom_line(aes(y = mean_freq_p2_plasmid, colour="Freq p2 plasmid")) +
+		    geom_line(aes(y = mean_freq_t2_plasmid, colour="Freq t2 plasmid")) +
 		    xlab("Generation") + 
-		    ylab("Mean t2 frequency infected") +
-		    ylim(0,1)
+		    ylab("Allele frequencies in plasmid") +
+		    ylim(0,1) +
+		    mytheme  
 
 	p6 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_p2_plasmid, colour="Freq p2 plasmid")) +
-		    theme_classic() + 
+		    geom_line(aes(y = mean_freq_p2_chr, colour="Freq p2 chromosome")) +
+		    geom_line(aes(y = mean_freq_t2_chr, colour="Freq t2 chromosome")) +
 		    xlab("Generation") + 
-		    ylab("Mean p2 frequency plasmid") +
-		    ylim(0,1)
-
+		    ylab("Allele frequencies in chromosome") +
+		    ylim(0,1)+ 
+		    mytheme  
 	p7 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_t2_plasmid, colour="Freq t2 plasmid")) +
-		    theme_classic() + 
+		    geom_line(aes(y = St1p1, colour="St1p1")) +
+		    geom_line(aes(y = St2p1, colour="St2p1")) +
+		    geom_line(aes(y = St1p2, colour="St1p2")) +
+		    geom_line(aes(y = St2p2, colour="St2p2")) +
 		    xlab("Generation") + 
-		    ylab("Mean t2 frequency plasmid") +
-		    ylim(0,1)
+		    ylab("Abs frequencies Susceptible genotypes") +
+		    mytheme  
 
 	p8 <- ggplot(data=the.data
 		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_p2_chr, colour="Freq p2 chromosome")) +
-		    theme_classic() + 
-		    xlab("Generation") + 
-		    ylab("Mean p2 frequency chromosome") +
-		    ylim(0,1)
+		    geom_line(aes(y = It1p1t1p1, colour="It1p1t1p1")) +
+		    geom_line(aes(y = It2p1t1p1, colour="It2p1t1p1")) +
+		    geom_line(aes(y = It1p2t1p1, colour="It1p2t1p1")) +
+		    geom_line(aes(y = It2p2t1p1, colour="It2p2t1p1")) +
 
-	p9 <- ggplot(data=the.data
-		,aes(x=time)) +
-		    geom_line(aes(y = mean_freq_t2_chr, colour="Freq t2 chromosome")) +
-		    theme_classic() + 
+		    geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
+		    geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
+		    geom_line(aes(y = It1p2t2p1, colour="It1p2t2p1")) +
+		    geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
+
+		    geom_line(aes(y = It1p1t1p2, colour="It1p1t1p2")) +
+		    geom_line(aes(y = It2p1t1p2, colour="It2p1t1p2")) +
+		    geom_line(aes(y = It1p2t1p2, colour="It1p2t1p2")) +
+		    geom_line(aes(y = It2p2t1p2, colour="It2p2t1p2")) +
+
+		    geom_line(aes(y = It1p1t2p2, colour="It1p1t2p2")) +
+		    geom_line(aes(y = It2p1t2p2, colour="It2p1t2p2")) +
+		    geom_line(aes(y = It1p2t2p2, colour="It1p2t2p2")) +
+		    geom_line(aes(y = It2p2t2p2, colour="It2p2t2p2")) +
+
 		    xlab("Generation") + 
-		    ylab("Mean t2 frequency chromosome") +
-		    ylim(0,1)
+		    ylab("Abs frequencies Susceptible genotypes") +
+		    mytheme  
+
 	big_plot <- arrangeGrob(p1, 
 							p2, 
 							p3,
-							p4, p5,p6,p7,	
-							p8,p9,
-							nrow=3,ncol=3)
+							p4, p5,	
+							p6,
+							p7, p8,
+							nrow=2,ncol=4)
 
 	the.base.name <- basename(files[f_idx])
 

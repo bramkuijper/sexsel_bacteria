@@ -202,22 +202,36 @@ p8 <- ggplot(data=the.data
 	    geom_line(aes(y = It2p1t1p1, colour="It2p1t1p1")) +
 	    geom_line(aes(y = It1p2t1p1, group=rep,colour="It1p2t1p1")) +
 	    geom_line(aes(y = It2p2t1p1, group=rep,colour="It2p2t1p1")) +
+	    xlab("Generation") + 
+	    ylab("Abs frequencies Susceptible genotypes") +
+	    mytheme  
 
-	   # geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
-	   # geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
+p9 <- ggplot(data=the.data
+	,aes(x=time)) +
+	    geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
+	    geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
 	    geom_line(aes(y = It1p2t2p1, group=rep,colour="It1p2t2p1")) +
-	   # geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
+	    geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
+	    xlab("Generation") + 
+	    ylab("Abs frequencies Susceptible genotypes") +
+	    mytheme  
 
-	   # geom_line(aes(y = It1p1t1p2, colour="It1p1t1p2")) +
-	   # geom_line(aes(y = It2p1t1p2, colour="It2p1t1p2")) +
-	   # geom_line(aes(y = It1p2t1p2, colour="It1p2t1p2")) +
-	   # geom_line(aes(y = It2p2t1p2, colour="It2p2t1p2")) +
+p10 <- ggplot(data=the.data
+	,aes(x=time)) +
+	    geom_line(aes(y = It1p1t1p2, colour="It1p1t1p2")) +
+	    geom_line(aes(y = It2p1t1p2, colour="It2p1t1p2")) +
+	    geom_line(aes(y = It1p2t1p2, colour="It1p2t1p2")) +
+	    geom_line(aes(y = It2p2t1p2, colour="It2p2t1p2")) +
+	    xlab("Generation") + 
+	    ylab("Abs frequencies Susceptible genotypes") +
+	    mytheme  
 
-	   # geom_line(aes(y = It1p1t2p2, colour="It1p1t2p2")) +
-	   # geom_line(aes(y = It2p1t2p2, colour="It2p1t2p2")) +
-	   # geom_line(aes(y = It1p2t2p2, colour="It1p2t2p2")) +
-	   # geom_line(aes(y = It2p2t2p2, colour="It2p2t2p2")) +
-
+p11 <- ggplot(data=the.data
+	,aes(x=time)) +
+	    geom_line(aes(y = It1p1t2p2, colour="It1p1t2p2")) +
+	    geom_line(aes(y = It2p1t2p2, colour="It2p1t2p2")) +
+	    geom_line(aes(y = It1p2t2p2, colour="It1p2t2p2")) +
+	    geom_line(aes(y = It2p2t2p2, colour="It2p2t2p2")) +
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
 	    mytheme  
@@ -228,7 +242,8 @@ big_plot <- arrangeGrob(p1,
 						p4, p5,	
 						p6,
 						p7, p8,
-						nrow=2,ncol=4)
+						p9, p10, p11,
+						nrow=3,ncol=4)
 
 
 output_file_name <- paste(

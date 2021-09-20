@@ -23,15 +23,15 @@ kappa <- 1.0 / N
 bmax <- 50
 
 # cost of preference 
-c <- c(0.001)
+c <- c(0.00)
 #c <- 0.8
 
 # clearance rate good plasmid
-loss_gamma <- 0.005
+loss_gamma <- 0.01
 
 # cost of trait
 #epsilon <- c(0.001,0.01, 0.1)
-epsilon <- 0.01
+epsilon <- 0.0
 
 # cost of plasmid
 #delta <- c(0.01,0.1)
@@ -45,7 +45,7 @@ pi_inf <- 0.95
 d <- 0.01 
 
 # recombination rate
-r <- 1e-2
+r <- 1e-6
 
 # chromosomal integration rate
 tau <- 0.0
@@ -55,8 +55,8 @@ tau <- 0.0
 #mu_t <- c(0.001,0.01)
 
 mu_p <- 1e-6
-mu_t <- 1e-6
-mu_t2 <- 1e-5 
+mu_t <- 1e-6 
+nu <- 1e-5
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
@@ -131,7 +131,7 @@ combinations <- as.data.frame(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
-                ,mu_t2=mu_t2
+                ,nu=nu
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha
@@ -227,7 +227,7 @@ summarize.params(
 		,r=r
                 ,mu_p=mu_p
                 ,mu_t=mu_t
-                ,mu_t2=mu_t2
+                ,nu=nu
                 ,init_p2=init_p2
                 ,init_t2=init_t2
 		,alpha=alpha

@@ -45,7 +45,7 @@ pi_inf <- 0.95
 d <- 0.01 
 
 # recombination rate
-r <- 1e-2
+r <- 1e-6
 
 # chromosomal integration rate
 tau <- 0.0
@@ -56,7 +56,7 @@ tau <- 0.0
 
 mu_p <- 1e-6
 mu_t <- 1e-6
-mu_t2 <- 1e-5 
+mu_t2 <- 1e-6 
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)

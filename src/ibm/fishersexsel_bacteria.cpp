@@ -123,9 +123,6 @@ std::vector < std::vector < Individual > > Susceptible;
 // 4x4xI vectors of infected individuals 
 std::vector < std::vector < std::vector < Individual > > > Infected;
 
-// 4xP vectors of Environmental Plasmids (1 for each genotype)
-std::vector < std::vector < Individual > > EnvPlasmid;
-
 // number of infected and susceptible hosts
 //
 int Ns, Ni, N;   
@@ -133,7 +130,6 @@ int Ns, Ni, N;
 // sizes of the various classes, needed for sampling
 std::vector <int> Isizes;
 std::vector <int> Ssizes;
-std::vector <int> EPsizes;
 
 //// vector of attractiveness for all individuals 
 //// from the perspective of a focal with homozygote preference 

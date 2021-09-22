@@ -93,6 +93,10 @@ double tau = 0.0;
 
 //plasmid formation rate (plasmid formed from chromosome)
 // not in use currently
+// to be named
+
+// plasmid acceptance probability
+// after conjugation 
 double lambda = 0.0;
 
 // death rate 
@@ -690,7 +694,7 @@ void conjugation_infected(
     // infected host receives a plasmid next to one it already has
     // now we have to randomly choose between 2 plasmids
     // hence, only a change when 
-    if (uniform(rng_r) < 0.5) 
+    if (uniform(rng_r) < lambda) 
     {
         Individual new_ind;
         new_ind.p_chr = geno_has_p2[recipient_chromosome];

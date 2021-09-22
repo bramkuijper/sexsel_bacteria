@@ -26,7 +26,7 @@ library("gridExtra")
 
 # list of simulation output files
 files <- list.files(
-        path=".",
+        path=".", recursive = T,
         pattern="^sim_bact_sexsel.*?\\.csv$")
 
 print(files)
@@ -120,7 +120,6 @@ for (f_idx in 1:length(files))
 		the.data <- the.data[seq(1,nrow(the.data),100), ]
 		}
 	}
-} # end for file loop
 
 mytheme <- theme_classic() + 
 	   theme(axis.text = element_text(size=14), 
@@ -186,22 +185,23 @@ p6 <- ggplot(data=the.data
 	    ylab("Allele frequencies in chromosome") +
 	    ylim(0,1)+ 
 	    mytheme  
+   
 p7 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = St1p1, group=rep, colour="St1p1")) +
-	    geom_line(aes(y = St2p1, group=rep, colour="St2p1")) +
-	    geom_line(aes(y = St1p2, group=rep, colour="St1p2")) +
-	    geom_line(aes(y = St2p2, group=rep, colour="St2p2")) +
+	    geom_line(aes(y = St1p1, colour="St1p1")) +
+	    geom_line(aes(y = St2p1, colour="St2p1")) +
+	    geom_line(aes(y = St1p2, colour="St1p2")) +
+	    geom_line(aes(y = St2p2, colour="St2p2")) +
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
 	    mytheme  
 
 p8 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = It1p1t1p1, group=rep, colour="It1p1t1p1")) +
+	    geom_line(aes(y = It1p1t1p1,  colour="It1p1t1p1")) +
 	    geom_line(aes(y = It2p1t1p1, colour="It2p1t1p1")) +
-	    geom_line(aes(y = It1p2t1p1, group=rep,colour="It1p2t1p1")) +
-	    geom_line(aes(y = It2p2t1p1, group=rep,colour="It2p2t1p1")) +
+	    geom_line(aes(y = It1p2t1p1, colour="It1p2t1p1")) +
+	    geom_line(aes(y = It2p2t1p1, colour="It2p2t1p1")) +
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
 	    mytheme  
@@ -210,7 +210,7 @@ p9 <- ggplot(data=the.data
 	,aes(x=time)) +
 	    geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
 	    geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
-	    geom_line(aes(y = It1p2t2p1, group=rep,colour="It1p2t2p1")) +
+	    geom_line(aes(y = It1p2t2p1, colour="It1p2t2p1")) +
 	    geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
@@ -254,3 +254,4 @@ output_file_name <- paste(
 
 ggsave(output_file_name, big_plot, width=25,height = 15)
 
+}# end for file loop

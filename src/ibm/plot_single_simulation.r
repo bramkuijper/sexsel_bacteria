@@ -23,10 +23,11 @@ library("gridExtra")
 #    print("Usage: /path/plot_single_simulation.r output_file_blabla.csv")
 #    stop()
 #}
-
+path.name = "lambda_1"
 # list of simulation output files
 files <- list.files(
-        path=".", recursive = T,
+        path=path.name, recursive = T,
+	full.names=T,
         pattern="^sim_bact_sexsel.*?\\.csv$")
 
 print(files)
@@ -95,6 +96,7 @@ find_out_param_line <- function(filename)
 data.first <- F
 the.data <-NULL
 the.base.name <- NULL
+the.dir.name <- NULL
 
 for (f_idx in 1:length(files)) 
 {
@@ -114,6 +116,7 @@ for (f_idx in 1:length(files))
 	    # read in data frame of corresponding simulation
 	    parameter_row <- find_out_data_start(files[f_idx])
             the.base.name <- basename(files[f_idx])
+            the.dir.name <- dirname(files[f_idx])
             the.data <- read.table(files[f_idx], header=T, skip=parameter_row - 1, sep=";")
 	    if(max(the.data$time) > 1e+6)
 		{
@@ -246,10 +249,10 @@ big_plot <- arrangeGrob(p1,
 						nrow=3,ncol=4)
 
 
-output_file_name <- paste(
-	"graph_"
+output_file_name <- paste(the.dir.name,
+	"/graph_"
 	,the.base.name
-	,".pdf"
+	,".jpeg"
 	,sep="")
 
 ggsave(output_file_name, big_plot, width=25,height = 15)

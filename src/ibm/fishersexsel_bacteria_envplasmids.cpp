@@ -130,6 +130,9 @@ std::vector < std::vector < Individual > > Susceptible;
 std::vector < std::vector < std::vector < Individual > > > Infected;
 
 // 4xP vectors of Environmental Plasmids (1 for each genotype)
+// for now we're coding environmental plasmids as individuals...
+// NOTE: this should be changed in future
+// and make new class Plasmid?
 std::vector < std::vector < Individual > > EnvPlasmid;
 
 // number of infected and susceptible hosts
@@ -813,10 +816,16 @@ void loss_plasmid()
     new_ind.p_chr = geno_has_p2[infected_chr_idx];
     new_ind.t_chr = geno_has_t2[infected_chr_idx];
     new_ind.has_plasmid = false;
+    
+    Individual new_plasmid;
+    new_plasmid.p_plasmid = geno_has_p2[infected_plasmid_idx];
+    new_plasmid.t_plasmid = geno_has_t2[infected_plasmid_idx];
 
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
 
     Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
+
+    EnvPlasmid[infected_plasmid_idx].push_back(new_plasmid);
 
     Susceptible[infected_chr_idx].push_back(new_ind);
 
@@ -1516,7 +1525,7 @@ void event_chooser(int const time_step)
             break;
         }
 
-	// infection of a Susceotible by an enviromental plasmid
+	// infection of a Susceptible by an enviromental plasmid
 	case 10:
 	{
 	    std::discrete_distribution <int> env_infection_susceptible(
@@ -1530,14 +1539,12 @@ void event_chooser(int const time_step)
             genotype_environmental_plasmid = SEP_genotype_pair_idx % 4;
 
             // get susceptible chromosome 
-            genotype_susceptible = integer_division(
-                    integer_division(
-                        SI_genotype_pair_idx,4),4) % 4;
+            genotype_susceptible = integer_division(SEP_genotype_pair_idx,4) % 4;
 
             // obtain susceptible idx
             environmental_infection_susceptible(
                     genotype_susceptible
-                    ,genotype_infected_plasmid
+                    ,genotype_environmental_plasmid
                     );
             break;
 	}

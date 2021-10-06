@@ -2,6 +2,17 @@
 
 // initial model based on plasmid model by Gandon & Vale
 // modified by Ana Duarte
+// Susceptible individuals can be infected by conjugation 
+// with infected individuals who bear either
+// a bad (t1) or good (t2) plasmid
+// t is boolean t1 = 0; t2 = 1
+// p is boolean p1 = 0; p2 = 1 but is neutral in this model
+// pi (resistance) is continuous from 0 (no resistance) to 1 (full resistance) 
+//
+// Questions:
+// 1.Evolution of overall resistance to infection? (can we replicate Gandon & Vale with these slightly different assumptions)
+// 2.Evolution of preference for good plasmid infection? (ie resistance to t1 but not t2) 
+// 
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
@@ -13,7 +24,6 @@
 #include <cmath>
 #include <random>
 #include "individual.hpp"
-#include "plasmid.hpp"
 
 
 // C++ random number generation unsigned int seed = get_nanoseconds();
@@ -42,6 +52,9 @@ double init_t2 = 0;
 double freq_p2 = 0.0;
 double freq_t2 = 0.0;
 
+// resistance probability - part of the individual's genotype, will evolve
+double init_pi = 0.0;
+
 // number of timesteps that the simulation should run
 int max_time = 10;
 
@@ -64,42 +77,46 @@ double alpha = 0.0;
 
 // preference cost factor 
 // trait cost factor
+// resistance cost
 double c = 0.0;
 double epsilon = 0.0;
+double tau = 0.0;
 
 double cost_pref[3] = {0.0,0.0,0.0};
 double cost_trait[3] = {0.0,0.0,0.0};
 
-//cost of having plasmid
+//cost of having any plasmid
 double delta = 0.0;
 
-// loss rate of plasmid
-double gamma_loss = 0.0;
+// clearance rate or
+// loss rate of plasmid bad (t1) or good (t2)
+double gamma_loss_t1 = 0.0;
+double gamma_loss_t2 = 0.0;
 
-// conjugation rate 
-// environmental infection rate
-double pi = 0.0;
-double pi_env = 0.0;
+// force of infection coefficient
+// for t1 and t2 plasmids
+double beta_t1 = 0.0;
+double beta_t2 = 0.0;
 
-// vector to contain attractiveness
+//initialize force of infection 
+//for t1 and t2 plasmids
+double psi_t1 = 0.0;
+double psi_t2 = 0.0;
+
+// fitness effect of having bad or good plasmid
+double f1 = 0.0;
+double f2 = 0.0;
+
+// array to contain attractiveness
 // of individuals to homozygous recipients
 double attr_homz_recip[3] = {0.0,0.0,0.0};
 
-// vector to contain attractiveness
+// array to contain attractiveness
 // of individuals to heterozygous recipients
 double attr_hetz_recip[3] = {0.0,0.0,0.0};
-//
-//
-//chromosomal integration rate (plasmid integrated in chromosome)
-// not in use at the moment
-double tau = 0.0;
 
-//plasmid formation rate (plasmid formed from chromosome)
-// not in use currently
-// to be named
-
-//plasmid acceptance probability 
-// after mating
+// plasmid acceptance probability
+// after conjugation 
 double lambda = 0.0;
 
 // death rate 
@@ -111,9 +128,11 @@ double r = 0.0;
 // preference, ornament mutation rate
 // the rate at which p1 turns to p2 and vice-versa
 // the rate at which t1 turns to t2 
+// mutation rate and step for pi
 double mu_p = 0.0;
-
 double mu_t = 0.0;
+double mu_pi = 0.0;
+double mu_step_pi = 0.0;
 
 // the rate at which t2 turns to t1 
 // aka ornament biased mutation rate
@@ -130,22 +149,13 @@ std::vector < std::vector < Individual > > Susceptible;
 // 4x4xI vectors of infected individuals 
 std::vector < std::vector < std::vector < Individual > > > Infected;
 
-// 4xP vectors of Environmental Plasmids (1 for each genotype)
-// for now we're coding environmental plasmids as individuals...
-// NOTE: this should be changed in future
-// and make new class Plasmid?
-std::vector < std::vector < Plasmid > > EnvPlasmid;
-
 // number of infected and susceptible hosts
-// N_ep = number of environmental plasmids
+//
 int Ns, Ni, N;   
-// N_ep is parameter, Ne is counter
-int N_ep, Ne;
 
 // sizes of the various classes, needed for sampling
 std::vector <int> Isizes;
 std::vector <int> Ssizes;
-std::vector <int> EPsizes; 
 
 //// vector of attractiveness for all individuals 
 //// from the perspective of a focal with homozygote preference 
@@ -177,6 +187,8 @@ int integer_division(int const x, int const y)
 // calculate attractiveness of Infected individual
 // with given genotype
 // for Susceptible with given genotype 
+// NOTE: we don't need to change this because 
+// all individuals will be p1 (no mutation in p)
 double calc_attract_susceptible(
         int const geno_susceptible
         ,int const geno_chr_infected
@@ -202,6 +214,8 @@ double calc_attract_susceptible(
     return(attr_homz_recip[n_trait_alleles]);
 } // end calc_attractiveness
 
+// NOTE: we don't need to change this because 
+// all individuals will be p1 (no mutation in p)
 double calc_attract_infected(
         int const geno_chr_infected_recipient
         ,int const geno_plasmid_infected_recipient
@@ -236,59 +250,6 @@ double calc_attract_infected(
             attr_hetz_recip[n_trait_alleles]);
 }
 
-double calc_env_attract_susceptible(
-        int const geno_susceptible
-        ,int const geno_env_plasmid)
-{
-    assert(geno_susceptible >= 0);
-    assert(geno_susceptible < 4);
-    assert(geno_env_plasmid >= 0);
-    assert(geno_env_plasmid < 4);
-
-    // no preference, no need to calculate anything 
-    if (!geno_has_p2[geno_susceptible])
-    {
-        return(1.0);
-    }
-
-    // check if infected has trait
-    int n_trait_alleles = geno_has_t2[geno_env_plasmid]; 
-
-    return(attr_homz_recip[n_trait_alleles]);
-} // end calc_attractiveness
-
-/* scrap this bit of code for now
- 
-double calc_env_attract_infected(
-        int const geno_chr_infected_recipient
-        ,int const geno_plasmid_infected_recipient
-        ,int const geno_env_plasmid_donor
-        )
-{
-    assert(geno_env_plasmid_donor >= 0);
-    assert(geno_env_plasmid_donor < 4);
-    assert(geno_chr_infected_recipient >= 0);
-    assert(geno_chr_infected_recipient < 4);
-    assert(geno_plasmid_infected_recipient >= 0);
-    assert(geno_plasmid_infected_recipient < 4);
-
-    int n_pref_alleles = geno_has_p2[geno_chr_infected_recipient] +
-        geno_has_p2[geno_plasmid_infected_recipient];
- 
-    // if no preference
-    if (n_pref_alleles == 0)
-    {
-        return(1.0);
-    }
-
-    int n_trait_alleles = geno_has_t2[geno_env_plasmid_donor]; 
-
-    return(n_pref_alleles == 2 ?
-            attr_homz_recip[n_trait_alleles]
-            :
-            attr_hetz_recip[n_trait_alleles]);
-} */
-
 // initialize population
 void init_pop()
 {
@@ -309,15 +270,11 @@ void init_pop()
     // stochastically anyway)
 
     std::vector <Individual> v;
-    std::vector <Plasmid> x;
 
     for (int i = 0; i < 4; ++i)
     {
         Susceptible.push_back(v);
         Ssizes.push_back(0);
-
-	EnvPlasmid.push_back(x);
-	EPsizes.push_back(0);
 
         for (int j = 0; j < 4; ++j)
         {
@@ -343,10 +300,15 @@ void init_pop()
         init_ind.t_chr = allele_chr_is_t2;
         init_ind.has_plasmid = false;
 
+	init_ind.pi = pi;
+
         genotype_chr = alleles2genotypenr[allele_chr_is_t2][allele_chr_is_p2];
 
         Susceptible[genotype_chr].push_back(init_ind);
         assert(Susceptible[genotype_chr].size() > 0);
+        assert(Susceptible[genotype_chr].back().pi >= 0);
+        assert(Susceptible[genotype_chr].back().pi <= 1);
+
     }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
 
     bool allele_plm_is_p2;
@@ -370,32 +332,22 @@ void init_pop()
         
         init_ind.has_plasmid = true;
 
+	init_ind.pi = pi;
+
         genotype_chr = alleles2genotypenr[allele_chr_is_t2][allele_chr_is_p2];
         genotype_plasmid = alleles2genotypenr[allele_plm_is_t2][allele_plm_is_p2];
 
         Infected[genotype_chr][genotype_plasmid].push_back(init_ind);
 	assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
+        assert(Infected[genotype_chr][genotype_plasmid].back().pi >= 0);
+        assert(Infected[genotype_chr][genotype_plasmid].back().pi <= 0);
     }
-    // initialize environmental plasmid vectors 
-    for (int EP_idx = 0; EP_idx < N_ep; ++EP_idx)
-    {
-        allele_plm_is_p2 = uniform(rng_r) < init_p2;
-        allele_plm_is_t2 = uniform(rng_r) < init_t2;
-
-        Plasmid init_plasmid;
-        init_plasmid.p_gen = allele_plm_is_p2;
-        init_plasmid.t_gen = allele_plm_is_t2;
-
-        genotype_plasmid = alleles2genotypenr[allele_plm_is_t2][allele_plm_is_p2];
-
-        EnvPlasmid[genotype_plasmid].push_back(init_plasmid);
-        assert(EnvPlasmid[genotype_plasmid].size() > 0);
-    }// for (int EP_idx = 0; EP_idx < Ne; ++EP_idx)
-
 }//end void init_pop() 
 
 // perform recombination between plasmid and chromosome
 // in infected individuals
+// no need to change
+// we set the recombination rate to zero
 void recombine_infected(int const genotype_chr
         ,int const genotype_plasmid)
 {
@@ -454,12 +406,13 @@ void recombine_infected(int const genotype_chr
 } // end recombine_infected
 
 void mutate_infected(int const genotype_chr
-        ,int const genotype_plasmid)
+        ,int const genotype_plasmid, double const resistance)
 {
     assert(genotype_chr >= 0);
     assert(genotype_chr < 4);
     assert(genotype_plasmid >= 0);
     assert(genotype_plasmid < 4);
+    assert(
 
     assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
 
@@ -671,9 +624,7 @@ void init_arguments(int argc, char ** argv)
     h = atof(argv[20]);
     l = atof(argv[21]);
     N = atof(argv[22]);
-    N_ep = atof(argv[23]);
-    pi_env = atof(argv[24]);
-    base_name = argv[25];
+    base_name = argv[23];
 
   // for homozygote (at preference allele) recipients 
     attr_homz_recip[0] = 1.0; // attractiveness individual without ornament
@@ -693,6 +644,7 @@ void init_arguments(int argc, char ** argv)
     cost_trait[1] = l * epsilon;
     cost_trait[2] = epsilon;
 
+    
     // we roughly want 10000 lines of output 
     skip_output_rows = ceil((double) max_time/10000);
 }//end init_arguments()
@@ -701,7 +653,6 @@ void write_parameters(std::ofstream &data_file)
 {
     data_file << std::endl << std::endl
         << "N" << ";" << N << std::endl
-        << "N_ep" << ";" << N_ep << std::endl
         << "max_time" << ";" << max_time << std::endl
         << "p_noplasmid_init" << ";" << p_noplasmid_init << std::endl
         << "kappa" << ";" << kappa << std::endl
@@ -712,7 +663,6 @@ void write_parameters(std::ofstream &data_file)
         << "delta" << ";" << delta << std::endl
         << "gamma" << ";" << gamma_loss  << std::endl
         << "pi" << ";" << pi << std::endl
-        << "pi_env" << ";" << pi_env << std::endl
         << "tau" << ";" << tau << std::endl
         << "lambda" << ";" << lambda << std::endl
         << "d" << ";" << d << std::endl
@@ -757,34 +707,6 @@ void infection_susceptible(int const genotype_susceptible
     // by overwriting it with the susceptible
     // at the end of the stack of susceptibles
     Susceptible[genotype_susceptible].pop_back();
-} //end infection_susceptible()
-
-void environmental_infection_susceptible(int const genotype_susceptible
-        ,int const genotype_environmental_plasmid
-        )
-{
-    assert(genotype_susceptible >= 0);
-    assert(genotype_susceptible < 4);
-    assert(genotype_environmental_plasmid >= 0);
-    assert(genotype_environmental_plasmid < 4);
-    
-    // and assign newly infected to stack of infected
-    // individuals
-    Individual new_infected;
-    new_infected.p_chr = geno_has_p2[genotype_susceptible];
-    new_infected.t_chr = geno_has_t2[genotype_susceptible];
-    new_infected.p_plasmid = geno_has_p2[genotype_environmental_plasmid];
-    new_infected.t_plasmid = geno_has_t2[genotype_environmental_plasmid];
-    new_infected.has_plasmid = true;
-    Infected[genotype_susceptible][genotype_environmental_plasmid].push_back(new_infected);
-
-    // remove random old susceptible 
-    // by overwriting it with the susceptible
-    // at the end of the stack of susceptibles
-    // update vector of environmental plasmids as well
-    Susceptible[genotype_susceptible].pop_back();
-    EnvPlasmid[genotype_environmental_plasmid].pop_back();
-
 } //end infection_susceptible()
 
 void conjugation_infected(
@@ -842,17 +764,11 @@ void loss_plasmid()
     new_ind.p_chr = geno_has_p2[infected_chr_idx];
     new_ind.t_chr = geno_has_t2[infected_chr_idx];
     new_ind.has_plasmid = false;
-    
-    Plasmid new_plasmid;
-    new_plasmid.p_gen = geno_has_p2[infected_plasmid_idx];
-    new_plasmid.t_gen = geno_has_t2[infected_plasmid_idx];
 
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
-    // remove 1 infected individual from back of the list
+
     Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
-    // add an environmental plasmid to the back of the list 
-    EnvPlasmid[infected_plasmid_idx].push_back(new_plasmid);
-    // add a Susceptible to the back of the list
+
     Susceptible[infected_chr_idx].push_back(new_ind);
 
 }// end loss_plasmid()
@@ -931,12 +847,6 @@ void write_data_headers(std::ofstream &data_file)
             << (geno_has_p2[genotype_chr_idx] ? "p2" : "p1") 
             << ";";
 
-        data_file 
-            << "EP" 
-            << (geno_has_t2[genotype_chr_idx] ? "t2" : "t1") 
-            << (geno_has_p2[genotype_chr_idx] ? "p2" : "p1") 
-            << ";";
-
         for (int genotype_plasmid_idx = 0; 
                 genotype_plasmid_idx < 4; ++genotype_plasmid_idx) 
         {
@@ -953,20 +863,17 @@ void write_data_headers(std::ofstream &data_file)
     data_file
         << "Ns;"
         << "Ni;"
-	<< "Ne;"
         << "N;"
         << "mean_freq_p2_total;"
         << "mean_freq_p2_susceptible;"
         << "mean_freq_p2_infected;"
         << "mean_freq_p2_plasmid;"
         << "mean_freq_p2_chr;"
-        << "mean_freq_p2_envplasmid"
         << "mean_freq_t2_total;"
         << "mean_freq_t2_susceptible;"
         << "mean_freq_t2_infected;"
         << "mean_freq_t2_plasmid;" 
         << "mean_freq_t2_chr;" 
-        << "mean_freq_t2_envplasmid"
         << std::endl;
 }// end write_data_headers()
 
@@ -996,14 +903,12 @@ void update_counters()
 {
     Ns = 0;
     Ni = 0;
-    Ne = 0;
 
     int Iidx = 0;
 
     for (int geno_chr_idx = 0; geno_chr_idx < 4; ++geno_chr_idx)
     {
         Ns += Ssizes[geno_chr_idx] = Susceptible[geno_chr_idx].size();
-	Ne += EPsizes[geno_chr_idx] = EnvPlasmid[geno_chr_idx].size(); // note this says chr but it's a plasmid
 
         for (int geno_plasmid_idx = 0; geno_plasmid_idx < 4; ++geno_plasmid_idx)
         {
@@ -1014,8 +919,6 @@ void update_counters()
     }
 
     assert(Ns + Ni <= N);
-    assert(Ns + Ni <= N);
-    assert(Ne <= N_ep);
 } // end update counters
 
 // setup a distribution of events and choose
@@ -1048,8 +951,7 @@ void event_chooser(int const time_step)
     //      - more likely in infecteds as they carry more loci 
     // 9. recombination among plasmid and chromosome in 
     //      obvz an infected individual
-    // 10. infection of a Susceptible with an enviromental plasmid 
-    // 11. infection of an Infected with an enviromental plasmid 
+
 
     // we perform things into 2 stages: we first develop a cumulative
     // distribution split over 7 'main' events
@@ -1075,13 +977,10 @@ void event_chooser(int const time_step)
 
     // make vector to store force of infection rates between
     // susceptible and infecteds
-    // and environmental infection of susceptibles and infected
     std::vector <double> force_infection_susceptible;
-    std::vector <double> force_env_infection_susceptible;
     
     std::vector <double> force_infection_infected;
-    std::vector <double> force_env_infection_infected;
-
+    
     if (Ns == 0 && Ni == 0)
     {
         std::cout << "time: " << time_step << "  --> Population extinct!" << std::endl;
@@ -1098,12 +997,9 @@ void event_chooser(int const time_step)
     // this is according to frequency-dependence/mass action 
     // (p17 in Keeling & Rohani)
     double inv_popsize = 1.0 / (Ns + Ni);
-    double inv_SE_popsize = 1.0 /  Ne; // not sure whether this is correct???
 
     // aux variable for the force of infection
-    // and environmental infection
     double force_infection_ij;
-    double force_env_infection_ij;
 
     // density dependent correction of growth rates
     double dens_dep = 1.0 - kappa * (Ns + Ni);
@@ -1156,25 +1052,6 @@ void event_chooser(int const time_step)
                 total_rates[1] += force_infection_ij;
             }
         }
-
-	// 10. infection of susceptible with environmental plasmid
-        // iterate over all environmental genotypes 
-        for (int geno_env_plasmid_idx = 0; 
-                geno_env_plasmid_idx < 4; ++geno_env_plasmid_idx)
-        {
-           force_env_infection_ij = (1.0 - pi_env) * 
-                	calc_env_attract_susceptible(
-                               geno_sus_chr_idx
-                               ,geno_env_plasmid_idx) * inv_SE_popsize 
-                                   * Susceptible[geno_sus_chr_idx].size() * 
-                                        EnvPlasmid[geno_env_plasmid_idx].size();
-
-           assert(force_env_infection_ij >= 0.0);
-            
-           force_env_infection_susceptible.push_back(force_env_infection_ij);
-               
-           total_rates[10] += force_env_infection_ij;
-	}
         
         // 7. mutation susceptible
         // total mutation rate of this genotype
@@ -1261,33 +1138,7 @@ void event_chooser(int const time_step)
             recombination_infected.push_back(total_recombination_rate);
 
             total_rates[9] += total_recombination_rate;
-	    // scrap this bit of code until we know more
-            /*
-	    // 11. (super)infection of infected with environmental plasmid
-	    // iterate over all environmental genotypes 
-	    // QUESTION: should we make this probability smaller than for susceptibles?
-	    //
-	    for (int geno_env_plasmid_idx = 0; 
-			geno_env_plasmid_idx < 4; ++geno_env_plasmid_idx)
-	    {
 
-	        force_env_infection_ij = (1.0 - pi_env) * 
-			calc_env_attract_infected(
-			       geno_inf_chr_idx
-			       ,geno_inf_plasmid_idx
-			       ,geno_env_plasmid_idx) * inv_IE_popsize 
-				   * Infected[geno_inf_chr_idx][geno_inf_plasmid_idx].size() * 
-					EnvPlasmid[geno_env_plasmid_idx].size();
-
-	       assert(force_env_infection_ij >= 0.0);
-	    
-	       force_env_infection_infected.push_back(force_env_infection_ij);
-	       
-	       total_rates[11] += force_env_infection_ij;
-	       }
-	   */
-	    //
-       	    
         } // geno_inf_plasmid_idx
     } // end for geno_inf_chr_idx
 
@@ -1561,30 +1412,6 @@ void event_chooser(int const time_step)
             break;
         }
 
-	// infection of a Susceptible by an enviromental plasmid
-	case 10:
-	{
-	    std::discrete_distribution <int> env_infection_susceptible(
-			    force_env_infection_susceptible.begin(),
-			    force_env_infection_susceptible.end());
-
-            SEP_genotype_pair_idx = env_infection_susceptible(rng_r);
-
-	    // NOTE: ask Bram about this - hve no clue
-            // get infected plasmid 
-            genotype_environmental_plasmid = SEP_genotype_pair_idx % 4;
-
-            // get susceptible chromosome 
-            genotype_susceptible = integer_division(SEP_genotype_pair_idx,4) % 4;
-
-            // obtain susceptible idx
-            environmental_infection_susceptible(
-                    genotype_susceptible
-                    ,genotype_environmental_plasmid
-                    );
-            break;
-	}
-
         default:
             std::cout << "switch error" << std::endl;
             break;
@@ -1602,14 +1429,12 @@ void write_data(std::ofstream &data_file
     double mean_freq_p2_infected = 0;
     double mean_freq_p2_chr = 0;
     double mean_freq_p2_plasmid = 0;
-    double mean_freq_p2_envplasmid = 0;
 
     double mean_freq_t2_total = 0;
     double mean_freq_t2_susceptible = 0;
     double mean_freq_t2_infected = 0;
     double mean_freq_t2_chr = 0;
     double mean_freq_t2_plasmid = 0;
-    double mean_freq_t2_envplasmid = 0;
 
     //double p2, p2_chr, p2_plasmid, t2, t2_chr, t2_plasmid, n_plasmid;
 
@@ -1621,7 +1446,6 @@ void write_data(std::ofstream &data_file
         assert(Susceptible[genotype_chr_idx].size() >= 0);
         assert(Susceptible[genotype_chr_idx].size() <= Ns);
         data_file << Susceptible[genotype_chr_idx].size() << ";";
-        data_file << EnvPlasmid[genotype_chr_idx].size() << ";";
 
         // calculate allele freqs
         mean_freq_p2_total += geno_has_p2[genotype_chr_idx] * 
@@ -1633,8 +1457,6 @@ void write_data(std::ofstream &data_file
         mean_freq_p2_chr += geno_has_p2[genotype_chr_idx] *
             Susceptible[genotype_chr_idx].size();
        
-        mean_freq_p2_envplasmid += geno_has_p2[genotype_chr_idx] *
-            EnvPlasmid[genotype_chr_idx].size();
 
         mean_freq_t2_total += geno_has_t2[genotype_chr_idx] *
             Susceptible[genotype_chr_idx].size();
@@ -1645,8 +1467,6 @@ void write_data(std::ofstream &data_file
         mean_freq_t2_chr += geno_has_t2[genotype_chr_idx] *
             Susceptible[genotype_chr_idx].size();
 
-        mean_freq_t2_envplasmid += geno_has_t2[genotype_chr_idx] *
-            EnvPlasmid[genotype_chr_idx].size();
 
         for (int genotype_plasmid_idx = 0;
                 genotype_plasmid_idx < 4; ++genotype_plasmid_idx)
@@ -1703,14 +1523,12 @@ void write_data(std::ofstream &data_file
     assert(mean_freq_p2_infected <= 2*Ni);
     assert(mean_freq_p2_chr <= Ni + Ns);
     assert(mean_freq_p2_plasmid <= Ni);
-    assert(mean_freq_p2_envplasmid <= Ne);
 
     assert(mean_freq_t2_total <= Ns + 2 * Ni);
     assert(mean_freq_t2_susceptible <= Ns);
     assert(mean_freq_t2_infected <= 2*Ni);
     assert(mean_freq_t2_chr <= Ni + Ns);
     assert(mean_freq_t2_plasmid <= Ni);
-    assert(mean_freq_t2_envplasmid <= Ne);
     
     mean_freq_p2_total /= Ns + 2 * Ni;
     
@@ -1724,7 +1542,6 @@ void write_data(std::ofstream &data_file
     mean_freq_p2_infected /= 2*Ni;
     mean_freq_p2_plasmid /= Ni;
     mean_freq_p2_chr /= Ni + Ns;
-    mean_freq_p2_envplasmid /= Ne;
 
     mean_freq_t2_total /= Ns + 2 * Ni;
     mean_freq_t2_susceptible /= Ns;
@@ -1736,25 +1553,21 @@ void write_data(std::ofstream &data_file
     mean_freq_t2_infected /= 2*Ni;
     mean_freq_t2_plasmid /= Ni;
     mean_freq_t2_chr /= Ni + Ns;
-    mean_freq_t2_envplasmid /= Ne;
 
 	data_file 
         << Ns << ";"
         << Ni << ";"
-        << Ne << ";"
         << N << ";"
         << mean_freq_p2_total << ";"
         << mean_freq_p2_susceptible << ";"
         << mean_freq_p2_infected << ";"
         << mean_freq_p2_plasmid << ";"
         << mean_freq_p2_chr << ";"
-        << mean_freq_p2_envplasmid << ";"
         << mean_freq_t2_total << ";"
         << mean_freq_t2_susceptible << ";"
         << mean_freq_t2_infected << ";"
         << mean_freq_t2_plasmid << ";" 
         << mean_freq_t2_chr << ";" 
-        << mean_freq_t2_envplasmid << ";"
         << std::endl;
 }
 

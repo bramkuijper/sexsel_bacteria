@@ -39,6 +39,7 @@ SolveFisher::SolveFisher(int argc, char **argv)
     ,p2_t0{0.0} 
     ,t2_t0{0.0} 
     ,D_t0{0.0} 
+    ,skip_output{10}
     ,base_name{} 
     ,allele2genotypes{{t1p1,t1p2},{t2p1,t2p2}}
     ,has_p2{false,false,true,true}
@@ -411,6 +412,8 @@ void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
     data_file << (double)t2_chr / total_S << ";";
     data_file << (double)t2_plm / total_I << ";";
 
+    data_file << std::endl;
+
 } // SolveFisher::write_data()
 
 // initialize the numbers in this population
@@ -458,6 +461,8 @@ void SolveFisher::solveSys()
 
     // write parameters to output file
     write_parameters(output_file);
+
+    write_data_headers(output_file);
 
     init_population();
 
@@ -511,7 +516,7 @@ void SolveFisher::solveSys()
                     gamma * I[genotype_chr_idx][genotype_plm_idx];
             
                 recombination_in[genotype_chr_idx][genotype_plm_idx] = 
-                    recombination_in[genotype_chr_idx][genotype_plm_idx] = 0.0;
+                    recombination_out[genotype_chr_idx][genotype_plm_idx] = 0.0;
             }
             assert(sum_plasmid_loss[genotype_chr_idx] >= 0);
 
@@ -587,9 +592,9 @@ void SolveFisher::solveSys()
                     recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] -= 
                         r * I[geno_recip_chr_idx][geno_recip_plm_idx];
 
-                            total_recombination += 
-                                recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] 
-                                + recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
+                    total_recombination += 
+                        recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] 
+                        + recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
                 }
 
                 // level 3: donor chromosome
@@ -618,7 +623,13 @@ void SolveFisher::solveSys()
                 }
             }
         }
-        
+
+        if (total_recombination >= 1e-07)
+        {
+            std::cout << time_idx << " " << total_recombination << std::endl;
+        }
+
+
         assert(fabs(total_recombination) < 1e-07);
 
         double total_mutations = 0.0;

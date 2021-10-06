@@ -322,6 +322,7 @@ void birth(Individual &parent, bool parent_susceptible)
     // for now assuming strict inheritance
     // later on we might want to introduce segregational effects
     kid.nplasmids = parent.nplasmids;
+    kid.nplasmids_good = 0;
 
     // birth of infected individual
     for (int plasmid_idx = 0; plasmid_idx < parent.nplasmids; ++plasmid_idx)

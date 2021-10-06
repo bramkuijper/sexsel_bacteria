@@ -8,3 +8,6 @@ all : $(EXE)
 
 $(EXE) : $(CPP) $(HPP)
 	$(CXX) $(CXXFLAGS) -o $(EXE) $(CPP)
+
+clean :
+	rm -rf $(EXE)

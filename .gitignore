@@ -8,6 +8,7 @@
 *.csv
 *.png
 iter_*
+env/
 hpcbatch_*
 sim_*
 *lyxformat*

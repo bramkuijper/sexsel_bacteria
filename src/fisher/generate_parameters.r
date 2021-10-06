@@ -8,19 +8,19 @@
 nrep <- 1
 
 # density-dependence parameter
-kappa <- 0.01
+kappa <- 0.0001
 
 # max fecundity of the host
 bmax <- 50
 
 # cost of preference 
-cp <- c(0.0001)
+cp <- c(0.000)
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
 
 # cost of trait
-ct <- c(0.01)
+ct <- c(0.00)
 
 # cost of plasmid
 delta <- 0.01
@@ -48,6 +48,8 @@ D_t0 <- 0.1
 max_time <- 1e08
 
 N <- 10000
+
+frac_infected <- 0.5
 
 # preference factor
 a <- 0.5
@@ -104,6 +106,7 @@ combinations <- as.data.frame(
                         ,max_time=max_time
                         ,d=d
                         ,N=N
+                        ,frac_infected=frac_infected
                         ,p2_t0=p2_t0
                         ,t2_t0=t2_t0
                         ,D_t0=D_t0

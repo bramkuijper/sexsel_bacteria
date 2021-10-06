@@ -35,6 +35,7 @@ SolveFisher::SolveFisher(int argc, char **argv)
     ,r{0.0}
     ,a{0.0}
     ,N{0.0}
+    ,S_t0{0.0}
     ,p2_t0{0.0} 
     ,t2_t0{0.0} 
     ,D_t0{0.0} 
@@ -52,26 +53,26 @@ SolveFisher::SolveFisher(int argc, char **argv)
 void SolveFisher::init_arguments(int argc, char **argv)
 {
     kappa = atof(argv[1]);
-    gamma = atof(argv[1]);
-    delta = atof(argv[1]);
-    max_time = atof(argv[1]);
-    d = atof(argv[1]);
-    N = atof(argv[2]);
-    p2_t0 = atof(argv[3]);
-    t2_t0 = atof(argv[3]);
-    D_t0 = atof(argv[3]);
-    cp = atof(argv[3]);
-    ct = atof(argv[3]);
-    pi = atof(argv[3]);
-    a = atof(argv[3]);
-    hp = atof(argv[3]);
-    ht = atof(argv[3]);
-    mu_t[0] = atof(argv[3]);
-    mu_t[1] = atof(argv[3]);
-    mu_p[0] = atof(argv[3]);
-    mu_p[1] = atof(argv[3]);
+    gamma = atof(argv[2]);
+    delta = atof(argv[3]);
+    max_time = atof(argv[4]);
+    d = atof(argv[5]);
+    N = atof(argv[6]);
+    p2_t0 = atof(argv[7]);
+    t2_t0 = atof(argv[8]);
+    D_t0 = atof(argv[9]);
+    cp = atof(argv[10]);
+    ct = atof(argv[11]);
+    pi = atof(argv[12]);
+    a = atof(argv[13]);
+    hp = atof(argv[14]);
+    ht = atof(argv[15]);
+    mu_t[0] = atof(argv[16]);
+    mu_t[1] = atof(argv[17]);
+    mu_p[0] = atof(argv[18]);
+    mu_p[1] = atof(argv[19]);
 
-    base_name = argv[10];
+    base_name = argv[20];
 
     // fill vectors for parameters that will not change
     // during the iteration, i.e., fecundity and transmission rates
@@ -183,25 +184,51 @@ void SolveFisher::init_arguments(int argc, char **argv)
         } // end for geno_donor_plm_idx
     } // end for geno_recip_chr_idx
 
-    assert(beta_IxI[3][3][3][3] == a);
-    assert(beta_IxI[3][0][3][3] == 1.0);
+
+//    for (int idx1 = 0; idx1 < 4; ++idx1)
+//    {
+//        for (int idx2 = 0; idx2 < 4; ++idx2)
+//        {
+//            for (int idx3 = 0; idx3 < 4; ++idx3)
+//            {
+//                for (int idx4 = 0; idx4 < 4; ++idx4)
+//                {
+//                    std::cout << idx1 << " " << idx2 
+//                        << " " << idx3 << " " << idx4 << " " << beta_IxI[idx1][idx2][idx3][idx4] << std::endl;
+//                    if (idx1 < 2 && idx2 < 2)
+//                    {
+//                        assert(beta_IxI[idx1][idx2][idx3][idx4] == 1.0);
+//                    }
+//
+//                }
+//            }
+//        }
+//    }
+
+    assert(beta_IxI[3][3][3][3] == 1 + a);
+
+    // this would be a genotype t1p1 x t1p1 meeting any other genotype
+    assert(beta_IxI[0][0][3][3] == 1.0);
 
 }//end init_arguments
 
 // write all the parameters to the file data_file
 void SolveFisher::write_parameters(std::ofstream &data_file)
 {
+    
     for (int geno_chr_idx = 0; geno_chr_idx < 4; ++geno_chr_idx)
     {
         genotype geno_chr = static_cast<genotype>(geno_chr_idx);
         std::string tval_chr = geno_chr == t2p1 || geno_chr == t2p2 ? "t2" : "t1";
         std::string pval_chr = geno_chr == t1p2 || geno_chr == t2p2 ? "p2" : "p1";
 
+        // write fecundity parameters for all suscetible genotypes
         data_file << "fec_S" 
             << tval_chr 
             << pval_chr 
             << ";" 
-            << bS[geno_chr_idx] << std::endl;
+            << bS[geno_chr_idx]
+            << std::endl;
 
         for (int geno_plm_idx = 0; geno_plm_idx < 4; ++geno_plm_idx)
         {
@@ -213,8 +240,9 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
                 << tval_chr 
                 << pval_chr 
                 << tval_plm 
-                << pval_plm << ";" << 
-                bI[geno_chr][geno_plm_idx] << std::endl;
+                << pval_plm << ";" <<
+                bI[geno_chr][geno_plm_idx]
+                << std::endl;
         
             for (int geno_chr_idx2 = 0; 
                     geno_chr_idx2 < 4; ++geno_chr_idx2)
@@ -233,7 +261,7 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
                     << pval_donor_chr 
                     << tval_plm 
                     << pval_plm << ";" 
-                    << beta_SxI[geno_chr_idx][geno_chr_idx2][geno_plm_idx]
+                    << beta_SxI[geno_chr_idx][geno_chr_idx2][geno_plm_idx] 
                     << std::endl;
 
                 for (int geno_plm_idx2 = 0; 
@@ -261,7 +289,6 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
                         << pval_plm << ";" 
                         << beta_IxI[geno_chr_idx][geno_plm_idx2][geno_chr_idx2][geno_plm_idx]
                         << std::endl;
-
                 } // end for (int geno_plm_idx2
             } // end for (int geno_chr_idx2 = 0
         } // end for (int geno_plm_idx = 0
@@ -386,6 +413,38 @@ void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
 
 } // SolveFisher::write_data()
 
+// initialize the numbers in this population
+void SolveFisher::init_population()
+{
+    // calculate genotype frequencies
+    double freqs[4] = 
+        {(1.0 - t2_t0) * (1.0 - p2_t0) - r * D_t0
+            ,t2_t0 * (1.0 - p2_t0) + r * D_t0
+            ,(1.0 - t2_t0) * p2_t0 + r * D_t0
+            ,t2_t0 * p2_t0 - r * D_t0
+        };
+
+    for (int S_idx = 0; S_idx < 4; ++S_idx)
+    {
+        S[S_idx] = S_t0 * freqs[S_idx];
+        
+        assert(S[S_idx] >= 0);
+        assert(S[S_idx] <= S_t0);
+    }
+
+    for (int I_idx_chr = 0; I_idx_chr < 4; ++I_idx_chr)
+    {
+        for (int I_idx_plm = 0; I_idx_plm < 4; ++I_idx_plm)
+        {
+            I[I_idx_chr][I_idx_plm] = 
+                (N - S_t0) * freqs[I_idx_chr] * freqs[I_idx_plm];
+
+            assert(I[I_idx_chr][I_idx_plm] >= 0);
+            assert(I[I_idx_chr][I_idx_plm] <= N - S_t0);
+        }
+    }
+}// end SolveFisher::init_population()
+
 // attempt to numerically solve the 
 // system of differential equations
 void SolveFisher::solveSys()
@@ -400,6 +459,7 @@ void SolveFisher::solveSys()
     // write parameters to output file
     write_parameters(output_file);
 
+    init_population();
 
     for (int time_idx = 0; time_idx < max_time; ++time_idx)
     {

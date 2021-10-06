@@ -61,6 +61,7 @@ class SolveFisher
         double pi;
 
         double N;
+        double S_t0;
 
         // cost orn, pref
         double cp;
@@ -85,6 +86,7 @@ class SolveFisher
         bool has_p2[4];
         bool has_t2[4];
 
+        void init_population();
         void write_parameters(std::ofstream &data_file);
         void write_data(std::ofstream &data_file, int const time_step);
         void write_data_headers(std::ofstream &data_file);

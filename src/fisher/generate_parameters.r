@@ -23,17 +23,20 @@ loss_gamma <- 0.01
 ct <- c(0.00)
 
 # cost of plasmid
-delta <- 0.01
+delta <- 0.8
 
 # 1- conjugation rate 
-pival <- c(0.1)
+pival <- c(0.5)
 
 # death rates
 d <- 0.01 
 
-gdb_on <- T
+gdb_on <- F
 
 # recombination rate
+r <- 0.5 
+
+
 mu_p1 <- 1e-6 
 mu_p2 <- 1e-6
 
@@ -120,6 +123,7 @@ combinations <- as.data.frame(
                         ,cp=cp
                         ,ct=ct
                         ,pival=pival
+                        ,r=r
                         ,a=a
                         ,hp=hp
                         ,ht=ht

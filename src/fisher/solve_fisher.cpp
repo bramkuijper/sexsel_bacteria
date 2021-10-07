@@ -39,7 +39,7 @@ SolveFisher::SolveFisher(int argc, char **argv)
     ,p2_t0{0.0} 
     ,t2_t0{0.0} 
     ,D_t0{0.0} 
-    ,skip_output{10}
+    ,skip_output{1000}
     ,base_name{} 
     ,allele2genotypes{{t1p1,t1p2},{t2p1,t2p2}}
     ,has_p2{false,false,true,true}
@@ -66,15 +66,16 @@ void SolveFisher::init_arguments(int argc, char **argv)
     cp = atof(argv[11]);
     ct = atof(argv[12]);
     pi = atof(argv[13]);
-    a = atof(argv[14]);
-    hp = atof(argv[15]);
-    ht = atof(argv[16]);
-    mu_t[0] = atof(argv[17]);
-    mu_t[1] = atof(argv[18]);
-    mu_p[0] = atof(argv[19]);
-    mu_p[1] = atof(argv[20]);
+    r = atof(argv[14]);
+    a = atof(argv[15]);
+    hp = atof(argv[16]);
+    ht = atof(argv[17]);
+    mu_t[0] = atof(argv[18]);
+    mu_t[1] = atof(argv[19]);
+    mu_p[0] = atof(argv[20]);
+    mu_p[1] = atof(argv[21]);
 
-    base_name = argv[21];
+    base_name = argv[22];
 
     // fill vectors for parameters that will not change
     // during the iteration, i.e., fecundity and transmission rates
@@ -118,7 +119,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
             // fecundity of infected
             bI[geno_recip_chr_idx][geno_donor_plm_idx] = 
                 exp(-cp*(np2_recip_chr+np2_donor_plm) 
-                        -ct*(nt2_recip_chr+nt2_donor_plm));
+                        -ct*(nt2_recip_chr+nt2_donor_plm) - delta);
 
             // now loop through chromosomal genotypes of infected
             // and calculate infection rates
@@ -301,6 +302,7 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
         << "ht;" << ht << std::endl
         << "hp;" << hp << std::endl
         << "a;" << a << std::endl
+        << "r;" << r << std::endl
         << "eul;" << eul << std::endl
         << "frac_infected_t0;" << frac_infected_t0 << std::endl
         << "mu_t1;" << mu_t[0] << std::endl
@@ -591,12 +593,12 @@ void SolveFisher::solveSys()
                         0.5 * r * (I[recombinant1][recombinant2] +
                                 I[recombinant2][recombinant1]);
 
-                    recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] -= 
+                    recombination_out[geno_recip_chr_idx][geno_recip_plm_idx] += 
                         r * I[geno_recip_chr_idx][geno_recip_plm_idx];
 
                     total_recombination += 
                         recombination_in[geno_recip_chr_idx][geno_recip_plm_idx] 
-                        + recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
+                        - recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
                 }
 
                 // level 3: donor chromosome
@@ -681,7 +683,7 @@ void SolveFisher::solveSys()
                 - d * S[genotype_idx] 
                 
                 // 6. loss due to infections
-                - (1-pi) * total_force_of_infection_lossS[genotype_idx] * S[genotype_idx]; 
+                - (1.0-pi) * total_force_of_infection_lossS[genotype_idx] * S[genotype_idx]; 
 
             for (int plasmid_idx = 0; plasmid_idx < 4; ++plasmid_idx)
             {
@@ -744,7 +746,7 @@ void SolveFisher::solveSys()
 
                     // 5. recombination
                     + recombination_in[genotype_idx][plasmid_idx]
-                        - recombination_out[genotype_idx][plasmid_idx];
+                    - recombination_out[genotype_idx][plasmid_idx];
 
             } // end for plasmid_idx
 

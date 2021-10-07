@@ -31,6 +31,8 @@ pival <- c(0.1)
 # death rates
 d <- 0.01 
 
+gdb_on <- T
+
 # recombination rate
 mu_p1 <- 1e-6 
 mu_p2 <- 1e-6
@@ -68,6 +70,11 @@ script.dir <- getwd()
 
 # executable
 exe <- "./solve_fisher.exe"
+
+if (gdb_on)
+{
+    exe <- paste("gdb --args",exe)
+}
 
 # save current time point to make
 # filenames that contain a time stamp

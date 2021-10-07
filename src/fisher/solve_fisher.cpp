@@ -683,7 +683,7 @@ void SolveFisher::solveSys()
                 // 6. loss due to infections
                 - (1-pi) * total_force_of_infection_lossS[genotype_idx] * S[genotype_idx]; 
 
-            for (int plasmid_idx = 0; plasmid_idx < 3; ++plasmid_idx)
+            for (int plasmid_idx = 0; plasmid_idx < 4; ++plasmid_idx)
             {
                 genotype geno_plm = static_cast<genotype>(plasmid_idx);
 
@@ -753,6 +753,11 @@ void SolveFisher::solveSys()
         converged = true;
 
         N = 0;
+            
+//        if (time_idx > 20000)
+//        {
+//            std::cout << "t;" << time_idx << ";";
+//        }
 
         for (int genotype_idx = 0; genotype_idx < 4; ++genotype_idx)
         {
@@ -763,6 +768,11 @@ void SolveFisher::solveSys()
             {
                 converged = false;
             }
+
+//            if (time_idx > 20000)
+//            {
+//                std::cout << "S" << genotype_idx << ";" << eul * dSdt[genotype_idx] << ";";
+//            }
 
             // update value of S[i]
             S[genotype_idx] = S[genotype_idx] + eul*dSdt[genotype_idx];
@@ -781,19 +791,27 @@ void SolveFisher::solveSys()
                     converged = false;
                 }
 
-                I[genotype_idx][plasmid_idx] += eul*dSdt[genotype_idx];
+                I[genotype_idx][plasmid_idx] += eul*dIdt[genotype_idx][plasmid_idx];
 
                 if (I[genotype_idx][plasmid_idx] < 0.0)
                 {
                     I[genotype_idx][plasmid_idx] = 0.0;
                 }
+                
+//                if (time_idx > 20000)
+//                {
+//                    std::cout << "I" << genotype_idx << "_" << plasmid_idx << ";" << eul * dIdt[genotype_idx][plasmid_idx] << ";";
+//                }
 
                 N += I[genotype_idx][plasmid_idx];
             } // end for (int plasmid_idx
 
-
         } // end for (int genotype_idx = 0; genotype_idx < 4; ++genotype_idx)
    
+//        if (time_idx > 20000)
+//        {
+//            std::cout << std::endl;
+//        }
         if (time_idx % skip_output == 0)
         {
             write_data(output_file, time_idx);

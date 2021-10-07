@@ -75,7 +75,7 @@ for row_idx, plasmid_genotype in enumerate(["t1p1","t2p1","t1p2","t2p2"]):
             ax1.plot(
                     data["time"]
                     ,data[f"It{t_idx}p{p_idx}{plasmid_genotype}"]
-                    ,label="$S_{t_{" + str(t_idx) + "}p_{" + str(p_idx) + "}" +\
+                    ,label="$I_{t_{" + str(t_idx) + "}p_{" + str(p_idx) + "}" +\
                             plasmid_genotype + "}$"
                     )
 
@@ -92,12 +92,12 @@ ax1.plot(
 
 ax1.plot(
     data["time"]
-    ,data["S"]
+    ,data["I"]
     ,label="I")
 
 ax1.plot(
     data["time"]
-    ,data["S"]
+    ,data["N"]
     ,label="N")
 
 ax1.set_ylabel(r'Totals')

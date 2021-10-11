@@ -77,7 +77,8 @@ double sdmu_x = 0.0;
 // number of timesteps that the simulation should run
 int max_time = 10;
 
-int skip_output_rows = 1;
+int skip_output_rows = 100;
+
 
 // individual
 struct Individual
@@ -158,8 +159,8 @@ void init_pop()
         assert(Infected[I_idx].nplasmids_good > 0);
         assert(Infected[I_idx].nplasmids_good <= Infected[I_idx].nplasmids);
         Infected[I_idx].fraction_good = (double)n_good/n_plasmid_init;
-	std::cout << "Infected " << I_idx << " nr plasmids = " << Infected[I_idx].nplasmids 
-			                  << " ; good plasmids = " << Infected[I_idx].nplasmids_good << std::endl;
+//	std::cout << "Infected " << I_idx << " nr plasmids = " << Infected[I_idx].nplasmids 
+	//		                  << " ; good plasmids = " << Infected[I_idx].nplasmids_good << std::endl;
     }
 }//end void 
 
@@ -186,6 +187,9 @@ void init_arguments(int argc, char ** argv)
     init_fraction_infected = atof(argv[17]);
     //N = atoi(argv[18]);
     base_name = argv[18];
+
+    // we roughly want 10000 lines of output 
+    skip_output_rows = ceil((double) max_time/10000);
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)
@@ -253,7 +257,7 @@ void infection_susceptible(
 {
 
     assert(Infected.size() + Susceptible.size() <= N);
-    std::cout << "Before infection: " << " Susceptibles = " << Susceptible.size() << " -- inf_idx: " << S_idx << " " << Susceptible[S_idx].x << std::endl;
+   // std::cout << "Before infection: " << " Susceptibles = " << Susceptible.size() << " -- inf_idx: " << S_idx << " " << Susceptible[S_idx].x << std::endl;
     assert(S_idx >= 0);
     assert(S_idx < Ns);
     
@@ -263,7 +267,7 @@ void infection_susceptible(
 
     // assign newly infected to stack of infected
     // individuals
-    std::cout << "Before infection: " << " Infected = " << Infected.size() << std::endl;
+   // std::cout << "Before infection: " << " Infected = " << Infected.size() << std::endl;
     Infected.push_back(Susceptible[S_idx]);
 
     // update plasmids
@@ -285,9 +289,11 @@ void infection_susceptible(
     // check whether population is still within bounds
     // with density dependence this should always be the case
     assert(Infected.size() + Susceptible.size() <= N);
+    /*
     std::cout << "After infection: " << " Susceptibles = " << Susceptible.size() << std::endl;
     std::cout << "After infection: " << " Infected = " << Infected.size() 
 	      << " inf_idx: " << Infected.size() - 1 << " " << Infected.back().nplasmids << std::endl;
+	      */
     assert(Infected.back().nplasmids_good >= 0);
     assert(Infected.back().nplasmids_good <= Infected.back().nplasmids);
 }
@@ -345,12 +351,12 @@ void birth(Individual &parent, bool parent_susceptible)
 // death of randomly chosen a susceptible individual
 void death_susceptible()
 {
-    std::cout << "Before death: " << " Susceptibles = " << Susceptible.size() << std::endl;
+   // std::cout << "Before death: " << " Susceptibles = " << Susceptible.size() << std::endl;
     std::uniform_int_distribution<int> susceptible_sampler(0, Ns - 1);
 
     int random_susceptible = susceptible_sampler(rng_r);
     assert(Susceptible.size() + Infected.size() <= N);
-    std::cout << "Random susceptible " << random_susceptible << "will die" << std::endl;
+    //std::cout << "Random susceptible " << random_susceptible << "will die" << std::endl;
 
     assert(random_susceptible >= 0);
     assert(random_susceptible < Susceptible.size());
@@ -359,8 +365,8 @@ void death_susceptible()
 
     assert(Susceptible.size() >= 0);
     assert(Susceptible.size() + Infected.size() <= N);
-    std::cout << "After death: " << " Infected = " << Infected.size() << std::endl;
-    std::cout << "After death: " << " Susceptibles = " << Susceptible.size() << std::endl;
+    //std::cout << "After death: " << " Infected = " << Infected.size() << std::endl;
+    //std::cout << "After death: " << " Susceptibles = " << Susceptible.size() << std::endl;
 }// end death_susceptible()
 
 // co infect a host (index I_idx)
@@ -405,8 +411,8 @@ void loss_plasmid(int const I_idx, bool const plasmid_good)
     assert(I_idx >= 0);
     assert(I_idx < Infected.size());
 
-    std::cout << "Infected " << I_idx << " nr plasmids = " << Infected[I_idx].nplasmids 
-			                  << " ; good plasmids = " << Infected[I_idx].nplasmids_good << std::endl;
+   // std::cout << "Infected " << I_idx << " nr plasmids = " << Infected[I_idx].nplasmids 
+	//		                  << " ; good plasmids = " << Infected[I_idx].nplasmids_good << std::endl;
     if (plasmid_good)
     {
         assert(Infected[I_idx].nplasmids_good > 0);
@@ -516,7 +522,7 @@ void gamma_loss(double &gamma_good, double &gamma_bad, Individual &host)
 
 void update_counters()
 {
-    std::cout << "update counters" << std::endl;
+   // std::cout << "update counters" << std::endl;
     Ns = Susceptible.size();
     Ni = Infected.size();
 
@@ -635,8 +641,8 @@ void event_chooser(int const time_step)
         assert(Infected[inf_idx].x >= 0.0);
         assert(Infected[inf_idx].x <= 1.0);
         
-	std::cout << "Infected " << inf_idx << " nr plasmids = " << Infected[inf_idx].nplasmids 
-			                  << " ; good plasmids = " << Infected[inf_idx].nplasmids_good << std::endl;
+//	std::cout << "Infected " << inf_idx << " nr plasmids = " << Infected[inf_idx].nplasmids 
+	//		                  << " ; good plasmids = " << Infected[inf_idx].nplasmids_good << std::endl;
 
         if (Infected[inf_idx].x < 0.0)
         {
@@ -665,8 +671,8 @@ void event_chooser(int const time_step)
         loss_rates_bad.push_back(rate_loss_bad);
         total_rates[6] += rate_loss_bad;
 
-        std::cout << "Loss rate good of infected " << inf_idx << " = " << loss_rates_good.back() << std::endl;
-        std::cout << "Loss rate bad of infected " << inf_idx << " = " << loss_rates_bad.back() << std::endl;
+      //  std::cout << "Loss rate good of infected " << inf_idx << " = " << loss_rates_good.back() << std::endl;
+      //  std::cout << "Loss rate bad of infected " << inf_idx << " = " << loss_rates_bad.back() << std::endl;
         // 7. death rate infected
         death_rate = Infected[inf_idx].fraction_good * dG + 
             (1.0 - Infected[inf_idx].fraction_good) * dB;
@@ -696,12 +702,13 @@ void event_chooser(int const time_step)
     // 11. mutation of infected 
     double total_mu_Inf = mu_x * Ni ;
     total_rates[11] = total_mu_Inf; 
-
+/*
     std::cout << "time: " << time_step  << std::endl;
     for (int idx = 0; idx < total_rates.size(); idx ++)
         {
         std::cout << "total rates [" << idx  << "] = " << total_rates[idx] << std::endl;
 	}
+*/
     // done, now determine what to do by making a weighted distribution
     // this will return a number between 0 and n_events - 1
     // dependent on the relative weighting of each event
@@ -723,7 +730,7 @@ void event_chooser(int const time_step)
         
         case 0: // birth of susceptible
             {
-            std::cout << "time: " << time_step << " birth of Susceptible" << std::endl;
+          //  std::cout << "time: " << time_step << " birth of Susceptible" << std::endl;
                 assert(birth_rates_susceptible.size() == Ns);
                 // set up a probability distribution
                 // that determines which individual will be drawn
@@ -752,7 +759,7 @@ void event_chooser(int const time_step)
 
         case 1: // infection of a susceptible by good plasmid
             {
-            std::cout << "time: " << time_step << " infection of Susceptible by good plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " infection of Susceptible by good plasmid" << std::endl;
                 assert(infection_rate_susceptible_good.size() == Ns);
                 // set up a probability distribution
                 // that determines which individual will get infected
@@ -775,7 +782,7 @@ void event_chooser(int const time_step)
             }
         case 2: // infection of a susceptible by a bad plasmid
             {
-            std::cout << "time: " << time_step << " infection of Susceptible by bad plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " infection of Susceptible by bad plasmid" << std::endl;
                 // set up a probability distribution
                 // that determines which individual will get infected
                 // by a bad plasmid
@@ -796,7 +803,7 @@ void event_chooser(int const time_step)
             }
         case 3: // death susceptible
             // each susceptible has the same chance of dying
-            std::cout << "time: " << time_step << " death of Susceptible" << std::endl;
+           // std::cout << "time: " << time_step << " death of Susceptible" << std::endl;
             // so we do not need to set up a probability distribution
             // determining which susceptible is more likely to die relative
             // to others, we simply pick a 
@@ -810,7 +817,7 @@ void event_chooser(int const time_step)
         case 4: // birth infected host
             {
                 // set up probability distribution that determines
-            std::cout << "time: " << time_step << " birth of infected" << std::endl;
+           // std::cout << "time: " << time_step << " birth of infected" << std::endl;
                 // which individual will give birth
                 std::discrete_distribution <int> birth_infected_dist(
                     birth_rates_infected.begin()
@@ -830,7 +837,7 @@ void event_chooser(int const time_step)
             }
         case 5: // loss of a single good plasmid
             {
-            std::cout << "time: " << time_step << " loss single good plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " loss single good plasmid" << std::endl;
                 // set up probability distribution that determines
                 // which individual will lose a good plasmid
                 std::discrete_distribution <int> loss_good_plasmid_dist(
@@ -852,7 +859,7 @@ void event_chooser(int const time_step)
             }
         case 6: // loss of a single bad plasmid
             {
-            std::cout << "time: " << time_step << " loss single bad plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " loss single bad plasmid" << std::endl;
                 // set up probability distribution that determines
                 // which individual will lose a bad plasmid
                 std::discrete_distribution <int> loss_bad_plasmid_dist(
@@ -874,7 +881,7 @@ void event_chooser(int const time_step)
             }
         case 7:// death infected
             {
-            std::cout << "time: " << time_step << " death infected" << std::endl;
+           // std::cout << "time: " << time_step << " death infected" << std::endl;
                 // set up probability distribution that determines
                 // which individual will lose a bad plasmid
                 std::discrete_distribution <int> death_infected_dist(
@@ -895,7 +902,7 @@ void event_chooser(int const time_step)
             }
         case 8: // co-infection good plasmid
             {
-            std::cout << "time: " << time_step << " co-infection good plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " co-infection good plasmid" << std::endl;
                 //set up probability distribution that determines
                 //which individaul will get co-infected by a good plasmid
                 std::discrete_distribution <int> co_infection_good_dist(
@@ -916,7 +923,7 @@ void event_chooser(int const time_step)
             }
         case 9: // co-infection bad plasmid
             {
-            std::cout << "time: " << time_step << " co-infection bad plasmid" << std::endl;
+           // std::cout << "time: " << time_step << " co-infection bad plasmid" << std::endl;
                 //set up probability distribution that determines
                 //which individual will get co-infected by a good plasmid
                 std::discrete_distribution <int> co_infection_bad_dist(
@@ -942,13 +949,15 @@ void event_chooser(int const time_step)
             }
 	case 10: //mutation susceptible
 	    {
-            std::cout << "time: " << time_step << " mutation susceptible" << std::endl;
+         //   std::cout << "time: " << time_step << " mutation susceptible" << std::endl;
 		mutation_susceptible();	
+		break;
 	    }
 	case 11: //mutation infected 
 	    {
-            std::cout << "time: " << time_step << " mutation infected" << std::endl;
+           // std::cout << "time: " << time_step << " mutation infected" << std::endl;
 		mutation_infected();	
+		break;
 	    }
         default:
             std::cout << "switch error" << std::endl;
@@ -1042,7 +1051,7 @@ int main(int argc, char **argv)
     {
         event_chooser(time_idx);
 	update_counters();
-	std::cout << "what is happening????" << std::endl;
+//	std::cout << "what is happening????" << std::endl;
         if (time_idx % skip_output_rows == 0)
         {
             write_data(data_file, time_idx);

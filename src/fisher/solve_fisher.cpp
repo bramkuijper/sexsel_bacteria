@@ -91,7 +91,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
         // number of t2s on recipient's chromosome (0 or 1)
         int nt2_recip_chr = geno == t2p1 || geno == t2p2;
 
-        // number of t2s on recipient's chromosome (0 or 1)
+        // number of p2s on recipient's chromosome (0 or 1)
         int np2_recip_chr = geno == t1p2 || geno == t2p2;
 
         // fecundity of susceptible depends on number of t2s and p2s
@@ -129,7 +129,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 genotype geno_donor_chr = 
                     static_cast<genotype>(geno_donor_chr_idx);
 
-                int nt2_donor_chr = geno_donor_chr == t1p2 || 
+                int nt2_donor_chr = geno_donor_chr == t2p1 || 
                     geno_donor_chr == t2p2;
 
                 // by default set the infection rate to 0
@@ -141,10 +141,10 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 if (np2_recip_chr > 0 && nt2_donor_plm + nt2_donor_chr > 0)
                 {
                     beta_SxI[geno_recip_chr_idx][geno_donor_plm_idx][geno_donor_chr_idx] += 
-                        nt2_donor_plm + (nt2_donor_chr == 1.0 ? 
+                        nt2_donor_plm + nt2_donor_chr == 1 ? 
                             ht * a // donor heterozygous t1 t2
                             :
-                            a); // donor homozygous
+                            a; // donor homozygous
                 }
 
                 for (int geno_recip_plm_idx = 0; 
@@ -393,10 +393,22 @@ void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
             if (has_p2[plm_idx])
             {
                 p2 += I[chr_idx][plm_idx];
+                p2_plm += I[chr_idx][plm_idx];
+            }
+
+            if (has_p2[chr_idx])
+            {
+                p2 += I[chr_idx][plm_idx];
                 p2_chr += I[chr_idx][plm_idx];
             }
 
             if (has_t2[plm_idx])
+            {
+                t2 += I[chr_idx][plm_idx];
+                t2_plm += I[chr_idx][plm_idx];
+            }
+
+            if (has_t2[chr_idx])
             {
                 t2 += I[chr_idx][plm_idx];
                 t2_chr += I[chr_idx][plm_idx];
@@ -409,11 +421,12 @@ void SolveFisher::write_data(std::ofstream &data_file, int const time_step)
         << total_S + total_I << ";";
 
     data_file << (double)p2 / (total_S + 2*total_I) << ";";
-    data_file << (double)p2_chr / total_S << ";";
+
+    data_file << (double)p2_chr / (total_S + total_I) << ";";
     data_file << (double)p2_plm / total_I << ";";
 
     data_file << (double)t2 / (total_S + 2*total_I) << ";";
-    data_file << (double)t2_chr / total_S << ";";
+    data_file << (double)t2_chr / (total_S + total_I) << ";";
     data_file << (double)t2_plm / total_I << ";";
 
     data_file << std::endl;
@@ -662,7 +675,7 @@ void SolveFisher::solveSys()
 
             // check that total sum of mutations is indeed zero
             // (for the sake of debugging)
-            total_mutations += mu_t[!is_t2] * S[geno_chr_oppP] + mu_p[!is_p2] * S[geno_chr_oppP];
+            total_mutations += mu_t[!is_t2] * S[geno_chr_oppT] + mu_p[!is_p2] * S[geno_chr_oppP];
             total_mutations -= (mu_t[is_t2] + mu_p[is_p2]) * S[genotype_idx];
 
             // dSdt
@@ -674,7 +687,7 @@ void SolveFisher::solveSys()
                 sum_plasmid_loss[genotype_idx] +
 
                 // 3. mutation incoming
-                + mu_t[!is_t2] * S[geno_chr_oppP] + mu_p[!is_p2] * S[geno_chr_oppP]
+                + mu_t[!is_t2] * S[geno_chr_oppT] + mu_p[!is_p2] * S[geno_chr_oppP]
 
                 // 4. mutation outgoing
                 - (mu_t[is_t2] + mu_p[is_p2]) * S[genotype_idx] 
@@ -738,7 +751,7 @@ void SolveFisher::solveSys()
                         I[genotype_idx][plasmid_idx]
 
                     // 3. gain in infecteds from susceptible
-                    + (1-pi) * total_force_of_infection_gainI[genotype_idx][plasmid_idx] *
+                    + (1.0-pi) * total_force_of_infection_gainI[genotype_idx][plasmid_idx] *
                         I[genotype_idx][plasmid_idx]
 
                     // 4. loss in infecteds

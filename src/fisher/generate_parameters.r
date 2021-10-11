@@ -14,19 +14,19 @@ kappa <- 0.0001
 bmax <- 50
 
 # cost of preference 
-cp <- c(0.000)
+cp <- c(0.00)
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
 
 # cost of trait
-ct <- c(0.00)
+ct <- c(0.01)
 
 # cost of plasmid
 delta <- 0.8
 
 # 1- conjugation rate 
-pival <- c(0.5)
+pival <- c(0.1)
 
 # death rates
 d <- 0.01 
@@ -34,30 +34,30 @@ d <- 0.01
 gdb_on <- F
 
 # recombination rate
-r <- 0.5 
+r <- 1e-5 
 
 
 mu_p1 <- 1e-6 
 mu_p2 <- 1e-6
 
 mu_t1 <- 1e-6
-mu_t2 <- 0.05
+mu_t2 <- 1e-6
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-p2_t0 <- 0.5
-t2_t0 <- 0.2
-D_t0 <- 0.1
+p2_t0 <- 0.2
+t2_t0 <- 0.5
+D_t0 <- 0.15
 
-max_time <- 1e08
+max_time <- 5e08
 
 N <- 10000
 
 frac_infected <- 0.5
 
 # preference factor
-a <- 0.5
+a <- 1
 
 # preference dominance coefficient
 #h <- c(0,0.5,1)

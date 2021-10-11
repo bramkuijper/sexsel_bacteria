@@ -77,7 +77,8 @@ double sdmu_x = 0.0;
 // number of timesteps that the simulation should run
 int max_time = 10;
 
-int skip_output_rows = 1;
+int skip_output_rows = 100;
+
 
 // individual
 struct Individual
@@ -186,6 +187,9 @@ void init_arguments(int argc, char ** argv)
     init_fraction_infected = atof(argv[17]);
     //N = atoi(argv[18]);
     base_name = argv[18];
+
+    // we roughly want 10000 lines of output 
+    skip_output_rows = ceil((double) max_time/10000);
 }//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)

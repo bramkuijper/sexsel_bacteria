@@ -947,11 +947,13 @@ void event_chooser(int const time_step)
 	    {
          //   std::cout << "time: " << time_step << " mutation susceptible" << std::endl;
 		mutation_susceptible();	
+		break;
 	    }
 	case 11: //mutation infected 
 	    {
            // std::cout << "time: " << time_step << " mutation infected" << std::endl;
 		mutation_infected();	
+		break;
 	    }
         default:
             std::cout << "switch error" << std::endl;

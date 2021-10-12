@@ -8,13 +8,13 @@
 nrep <- 1
 
 # density-dependence parameter
-kappa <- 0.01
+kappa <- 0.0001
 
 # max fecundity of the host
 bmax <- 50
 
 # cost of preference 
-cp <- c(0.0001)
+cp <- c(0.00)
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
@@ -23,7 +23,7 @@ loss_gamma <- 0.01
 ct <- c(0.01)
 
 # cost of plasmid
-delta <- 0.01
+delta <- 0.8
 
 # 1- conjugation rate 
 pival <- c(0.1)
@@ -31,26 +31,33 @@ pival <- c(0.1)
 # death rates
 d <- 0.01 
 
+gdb_on <- F
+
 # recombination rate
+r <- 1e-5 
+
+
 mu_p1 <- 1e-6 
 mu_p2 <- 1e-6
 
 mu_t1 <- 1e-6
-mu_t2 <- 0.05
+mu_t2 <- 1e-6
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-p2_t0 <- 0.5
-t2_t0 <- 0.2
-D_t0 <- 0.1
+p2_t0 <- 0.2
+t2_t0 <- 0.5
+D_t0 <- 0.15
 
-max_time <- 1e08
+max_time <- 5e08
 
 N <- 10000
 
+frac_infected <- 0.5
+
 # preference factor
-a <- 0.5
+a <- 1
 
 # preference dominance coefficient
 #h <- c(0,0.5,1)
@@ -66,6 +73,11 @@ script.dir <- getwd()
 
 # executable
 exe <- "./solve_fisher.exe"
+
+if (gdb_on)
+{
+    exe <- paste("gdb --args",exe)
+}
 
 # save current time point to make
 # filenames that contain a time stamp
@@ -104,12 +116,14 @@ combinations <- as.data.frame(
                         ,max_time=max_time
                         ,d=d
                         ,N=N
+                        ,frac_infected=frac_infected
                         ,p2_t0=p2_t0
                         ,t2_t0=t2_t0
                         ,D_t0=D_t0
                         ,cp=cp
                         ,ct=ct
                         ,pival=pival
+                        ,r=r
                         ,a=a
                         ,hp=hp
                         ,ht=ht

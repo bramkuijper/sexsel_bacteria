@@ -61,7 +61,7 @@ class SolveFisher
         double pi;
 
         double N;
-        double S_t0;
+        double frac_infected_t0;
 
         // cost orn, pref
         double cp;

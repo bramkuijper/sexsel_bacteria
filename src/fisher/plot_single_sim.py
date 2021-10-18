@@ -37,15 +37,22 @@ data = pd.read_csv(
 # initialize and specify size 
 fig = plt.figure(figsize=(10,15))
 
-num_rows = 8
+num_rows = 9
 
 print(data.head())
+
+nrows = data.shape[0]
+
+if nrows > 1e05:
+    data = data.iloc[0:data.shape[0]:10,]
+    assert(data.shape[0] < nrows)
+    assert(data.shape[0] > 0)
 
 row_ctr = 0
 
 # subplot for susceptibles
 gs = gridspec.GridSpec(
-            nrows = 8
+            nrows = num_rows
             ,ncols = 1)
 
 ax1 = plt.subplot(gs[row_ctr, 0])
@@ -117,6 +124,8 @@ ax1.plot(
     ,label="$t_{2}$")
 
 ax1.legend()
+ax1.set_ylabel(r'Allele freqs')
+ax1.set_ylim((-0.05,1.05)) 
 
 row_ctr += 1
 
@@ -131,6 +140,11 @@ ax1.plot(
     ,data["p2_plm"]
     ,label="$p_{2,plm}$")
 
+ax1.legend()
+ax1.set_ylim((-0.05,1.05)) 
+row_ctr += 1
+
+ax1 = plt.subplot(gs[row_ctr, 0])
 ax1.plot(
     data["time"]
     ,data["t2_chr"]
@@ -141,6 +155,7 @@ ax1.plot(
     ,label="$t_{2,plm}$")
 
 ax1.legend()
+ax1.set_ylim((-0.05,1.05)) 
 
 graphname = os.path.dirname(filename)
 if graphname != '':

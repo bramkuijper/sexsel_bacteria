@@ -6,10 +6,10 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1 
+nrep <- 10
 
 # maximum number of times
-max_time <- 1e8
+max_time <- 10e8
 
 # initial fraction of infected individuals
 init_fraction_infected <-0.1
@@ -17,7 +17,7 @@ init_fraction_infected <-0.1
 # p good plasmid init
 p_good_init <- 0.0 
 
-N <- 100
+N <- 7000
 # density-dependence parameter
 kappa <- 1.0 / N
 
@@ -28,7 +28,7 @@ bmax <- 50
 init_x <- 0.0
 
 # cost of resistance 
-c <- 0.1
+c <- seq(0,5,by=0.5) 
 
 # clearance rate good plasmid
 gamma_G <- 1
@@ -44,13 +44,13 @@ gamma_B <- 0
 
 # force of infection 
 #psi <- c(0.01,0.05,0.1) 
-psi_G <- 0.1 
-psi_B <- 0.1 
+psi_G <- 0.0 
+psi_B <- 10 
 
 # death rates
-d <- 0.1 
-dG <- 0.1 
-dB <- 0.6 
+d <- 1 
+dG <- 1 
+dB <- 50 
 
 # recombination rate
 #r <- 1e-6
@@ -59,8 +59,8 @@ dB <- 0.6
 sigma <- 0.0
 
 # mutation rate
-mu_x <- 1e-6
-sdmu_x <- 1e-6
+mu_x <- 0.01
+sdmu_x <- 0.01
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
@@ -137,6 +137,7 @@ combinations <- as.data.frame(
                 ,sdmu_x=sdmu_x
                 ,init_x=init_x
 		,init_fraction_infected=init_fraction_infected
+		,N=N
                 ,stringsAsFactors=F
                 ))
 
@@ -228,6 +229,7 @@ summarize.params(
                 ,sdmu_x=sdmu_x
                 ,init_x=init_x
 		,init_fraction_infected=init_fraction_infected
+		,N=N
                 )
 #
 #

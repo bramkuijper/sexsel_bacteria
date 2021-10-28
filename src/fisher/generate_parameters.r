@@ -14,7 +14,7 @@ kappa <- 0.0001
 bmax <- 50
 
 # cost of preference 
-cp <- c(0.00)
+cp <- c(0.00,0.01)
 
 # clearance rate good plasmid
 loss_gamma <- 0.01
@@ -41,11 +41,9 @@ mu_p1 <- 0
 mu_p2 <- 0
 
 mu_t1 <- 0
-mu_t2 <- 0
+mu_t2 <- c(0,0.01)
 
 # initial frequencies of preference and trait
-#init_p2 <- c(0.01,0.1,0.8)
-#init_t2 <- c(0.01,0.1,0.8)
 p2_t0 <- seq(0.1,0.9,0.1)
 t2_t0 <- seq(0.1,0.9,0.1)
 D_t0 <- 0.15

@@ -20,22 +20,22 @@ SolveFisher::SolveFisher(int argc, char **argv)
         ,{0.0,0.0,0.0,0.0}}
     ,beta_SxI{}
     ,beta_IxI{}
-    ,kappa{0.0}
-    ,delta{0.0}
     ,max_time{0}
+    ,kappa{0.0}
     ,gamma{0.0}
     ,d{0.0}
-    ,pi{0.0}
-    ,cp{0.0}
-    ,ct{0.0}
+    ,delta{0.0}
     ,ht{0.0}
     ,hp{0.0}
-    ,mu_t{0.0,0.0}
-    ,mu_p{0.0,0.0}
     ,r{0.0}
     ,a{0.0}
+    ,mu_t{0.0,0.0}
+    ,mu_p{0.0,0.0}
+    ,pi{0.0}
     ,N{0.0}
     ,frac_infected_t0{0.0}
+    ,cp{0.0}
+    ,ct{0.0}
     ,p2_t0{0.0} 
     ,t2_t0{0.0} 
     ,D_t0{0.0} 
@@ -490,8 +490,6 @@ void SolveFisher::solveSys()
 
     init_population();
 
-    int Ntplus1;
-
     for (int time_idx = 0; time_idx < max_time; ++time_idx)
     {
         // calculate rates of plasmid loss
@@ -616,7 +614,7 @@ void SolveFisher::solveSys()
             for (int plm_idx1 = 0; plm_idx1 < 4; ++plm_idx1)
             {
                 sum_loss_gain_IxI += total_force_of_infection_IxI_gain[chr_idx1][plm_idx1]
-                    + total_force_of_infection_IxI_loss[chr_idx1][plm_idx1];
+                    - total_force_of_infection_IxI_loss[chr_idx1][plm_idx1];
             }
 
         }

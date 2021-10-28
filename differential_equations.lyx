@@ -646,7 +646,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+h_{t}a$
+\begin_inset Formula $1$
 \end_inset
 
 
@@ -708,7 +708,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+a$
+\begin_inset Formula $1+h_{t}a$
 \end_inset
 
 

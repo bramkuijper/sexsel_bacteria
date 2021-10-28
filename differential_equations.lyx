@@ -781,7 +781,7 @@ We then have the following dynamics of susceptibles of genotype
  & +\left(1-\pi\right)\sum_{t_{m}p_{n}}\beta_{t_{i}p_{j}|t_{m}p_{n}\times t_{k}p_{\ell}}\frac{I_{t_{m}p_{n}\times t_{k}p_{\ell}}}{N}S_{t_{i}p_{j}}\nonumber \\
  & -\left(d+\gamma\right)I_{t_{i}p_{j}\times t_{k}p_{\ell}}\nonumber \\
  & -rI_{t_{i}p_{j}\times t_{k}p_{\ell}}+rI_{t_{k}p_{j}\times t_{i}p_{\ell}}\nonumber \\
- & +\frac{1}{2}\left(1-\pi\right)\sum_{t_{m}p_{n}}\sum_{t_{x}p_{z}}\beta_{t_{i}p_{j}t_{x}p_{z}|t_{m}p_{n}\times t_{k}p_{\ell}}\frac{I_{t_{m}p_{n}\times t_{k}p_{\ell}}}{N}I_{t_{i}p_{j}t_{x}p_{z}}\nonumber \\
+ & +\frac{1}{2}\left(1-\pi\right)\sum_{t_{x}p_{z}}\sum_{t_{m}p_{n}}\beta_{t_{i}p_{j}t_{x}p_{z}|t_{m}p_{n}\times t_{k}p_{\ell}}\frac{I_{t_{m}p_{n}\times t_{k}p_{\ell}}}{N}I_{t_{i}p_{j}t_{x}p_{z}}\nonumber \\
  & -\frac{1}{2}\left(1-\pi\right)\sum_{t_{m}p_{n}}\sum_{t_{x}p_{z}}\beta_{t_{i}p_{j}t_{k}p_{\ell}|t_{m}p_{n}\times t_{x}p_{z}}\frac{I_{t_{m}p_{n}\times t_{x}p_{z}}}{N}I_{t_{i}p_{j}t_{k}p_{\ell}}\label{eq:dIdt}
 \end{align}
 

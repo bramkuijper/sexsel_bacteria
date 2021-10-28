@@ -608,6 +608,22 @@ void SolveFisher::solveSys()
             }
         }
 
+        // total losses should cancel against total gains
+        double sum_loss_gain_IxI = 0.0;
+
+        for (int chr_idx1 = 0; chr_idx1 < 4; ++chr_idx1)
+        {
+            for (int plm_idx1 = 0; plm_idx1 < 4; ++plm_idx1)
+            {
+                sum_loss_gain_IxI += total_force_of_infection_IxI_gain[chr_idx1][plm_idx1]
+                    + total_force_of_infection_IxI_loss[chr_idx1][plm_idx1];
+            }
+
+        }
+
+        assert(fabs(sum_loss_gain_IxI) <= 1.0e-07);
+
+
         // then calculate the infected x infected rate
         // for sake of clarity I do this in separate loop
 
@@ -682,11 +698,11 @@ void SolveFisher::solveSys()
         {
             std::cout << time_idx << " " << total_recombination << std::endl;
         }
-
-
         assert(fabs(total_recombination) < 1e-07);
 
         double total_mutations = 0.0;
+
+        // now calculate differential equations dSdt, dIdt
 
         // go through the 4 genotypes on the autosome:
         // (p1, t1), (p1, t2), (p2,t1), (p2, t2)
@@ -800,41 +816,35 @@ void SolveFisher::solveSys()
                     - recombination_out[genotype_idx][plasmid_idx]
 
                     // 6. gain in infecteds from infected x infected event
-                    + 0.5 * (1.0 - pi) * total_force_of_infection_IxI_gain[genotype_idx][plasmid_idx];
-
+                    + 0.5 * (1.0 - pi) * total_force_of_infection_IxI_gain[genotype_idx][plasmid_idx]
                 - 0.5 * (1.0 - pi) * total_force_of_infection_IxI_loss[genotype_idx][plasmid_idx];
 
             } // end for plasmid_idx
 
         } // end for int genotype_idx
 
+        assert(fabs(total_mutations) < 1e-07);
+
+        // bool to check whether system of equations
+        // has converged
         converged = true;
 
+        // reset population size
         N = 0;
             
-//        if (time_idx > 20000)
-//        {
-//            std::cout << "t;" << time_idx << ";";
-//        }
-
+        // update numbers of S and I 
         for (int genotype_idx = 0; genotype_idx < 4; ++genotype_idx)
         {
-            // S[i](t+1) = S[i] + eul * dSdt[i]
-            // S[i](t+1) - S[i] < vanish_bound
-            // eul*dSdt < vanish_bound
+            // check whether S has converged (i.e., whether eul * dSdt < some bound)
             if (fabs(eul*dSdt[genotype_idx]) > vanish_bound)
             {
                 converged = false;
             }
 
-//            if (time_idx > 20000)
-//            {
-//                std::cout << "S" << genotype_idx << ";" << eul * dSdt[genotype_idx] << ";";
-//            }
-
             // update value of S[i]
             S[genotype_idx] = S[genotype_idx] + eul*dSdt[genotype_idx];
 
+            // if negative return to 0
             if (S[genotype_idx] < 0.0)
             {
                 S[genotype_idx] = 0.0;
@@ -856,20 +866,12 @@ void SolveFisher::solveSys()
                     I[genotype_idx][plasmid_idx] = 0.0;
                 }
                 
-//                if (time_idx > 20000)
-//                {
-//                    std::cout << "I" << genotype_idx << "_" << plasmid_idx << ";" << eul * dIdt[genotype_idx][plasmid_idx] << ";";
-//                }
-
                 N += I[genotype_idx][plasmid_idx];
             } // end for (int plasmid_idx
 
         } // end for (int genotype_idx = 0; genotype_idx < 4; ++genotype_idx)
-   
-//        if (time_idx > 20000)
-//        {
-//            std::cout << std::endl;
-//        }
+  
+        // write data        
         if (time_idx % skip_output == 0)
         {
             write_data(output_file, time_idx);
@@ -879,7 +881,5 @@ void SolveFisher::solveSys()
         {
            break;
         } 
-
-
     } // end for int time_idx
 } // end void iterateSys()

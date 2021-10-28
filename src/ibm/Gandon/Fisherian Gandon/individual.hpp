@@ -17,9 +17,6 @@ class Individual
         bool p_plasmid;
         bool t_plasmid;
 	
-	// resistance in chromosome	
-	double pi;
-
         // plasmid absent/present
         bool has_plasmid;
 

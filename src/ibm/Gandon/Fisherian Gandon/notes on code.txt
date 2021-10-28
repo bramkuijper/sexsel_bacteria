@@ -1,0 +1,1 @@
+- generate parameters.r --> add the init_p2_chr, init_p2_plasmid etc

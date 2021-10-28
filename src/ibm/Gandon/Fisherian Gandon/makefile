@@ -1,7 +1,8 @@
 CXX=g++
 FLAGS=-Wall -g -O3 -std=c++17
-EXE=sexsel_bacteria.exe
-CPP=sexsel_bacteria.cpp 
+EXE=fishersexsel_Gandon.exe
+CPP=fishersexsel_bacteria_Gandon_new.cpp individual.cpp
+HPP=individual.hpp
 
 
 $(EXE) : $(CPP) $(HPP)

@@ -26,8 +26,6 @@ std::string base_name;
 // initial value of resistance
 double init_x = 0.0;
 
-// population size
-int const N = 100;
 //fraction infected
 double init_fraction_infected = 0.0;
 
@@ -111,15 +109,43 @@ std::vector <Individual> Infected;
 
 // number of infected and susceptible hosts
 // 
-int Ni = round(N * init_fraction_infected);
-int Ns = N - Ni;
+int N, Ni, Ns;
 
+// initialize the parameters through the command line
+void init_arguments(int argc, char ** argv)
+{
+    // obtain all parameters from the command line
+    max_time = atof(argv[1]);
+    p_good_init = atof(argv[2]);
+    kappa = atof(argv[3]);
+    bmax = atof(argv[4]);
+    c = atof(argv[5]);
+    gamma_G = atof(argv[6]);
+    gamma_B = atof(argv[7]);
+    psi_G = atof(argv[8]);
+    psi_B = atof(argv[9]);
+    d = atof(argv[10]);
+    dG = atof(argv[11]);
+    dB = atof(argv[12]);
+    sigma = atof(argv[13]);
+    mu_x = atof(argv[14]);
+    sdmu_x = atof(argv[15]);
+    init_x = atof(argv[16]);
+    init_fraction_infected = atof(argv[17]);
+    N = atoi(argv[18]);
+    base_name = argv[19];
+
+    // we roughly want 10000 lines of output 
+    skip_output_rows = ceil((double) max_time/10000);
+}//end init_arguments()
 
 // initialize population
 void init_pop()
 {
     // auxiliary variable to keep track
     // of the fraction of good plasmids in each infected
+    Ni = round(N * init_fraction_infected);
+    Ns = N - Ni;
     int n_good;
     Individual eve;
     // initialize susceptibles
@@ -156,7 +182,7 @@ void init_pop()
         }
 
         Infected[I_idx].nplasmids_good = n_good;
-        assert(Infected[I_idx].nplasmids_good > 0);
+        assert(Infected[I_idx].nplasmids_good >= 0);
         assert(Infected[I_idx].nplasmids_good <= Infected[I_idx].nplasmids);
         Infected[I_idx].fraction_good = (double)n_good/n_plasmid_init;
 //	std::cout << "Infected " << I_idx << " nr plasmids = " << Infected[I_idx].nplasmids 
@@ -164,40 +190,13 @@ void init_pop()
     }
 }//end void 
 
-// initialize the parameters through the command line
-void init_arguments(int argc, char ** argv)
-{
-    // obtain all parameters from the command line
-    max_time = atof(argv[1]);
-    p_good_init = atof(argv[2]);
-    kappa = atof(argv[3]);
-    bmax = atof(argv[4]);
-    c = atof(argv[5]);
-    gamma_G = atof(argv[6]);
-    gamma_B = atof(argv[7]);
-    psi_G = atof(argv[8]);
-    psi_B = atof(argv[9]);
-    d = atof(argv[10]);
-    dG = atof(argv[11]);
-    dB = atof(argv[12]);
-    sigma = atof(argv[13]);
-    mu_x = atof(argv[14]);
-    sdmu_x = atof(argv[15]);
-    init_x = atof(argv[16]);
-    init_fraction_infected = atof(argv[17]);
-    //N = atoi(argv[18]);
-    base_name = argv[18];
-
-    // we roughly want 10000 lines of output 
-    skip_output_rows = ceil((double) max_time/10000);
-}//end init_arguments()
 
 void write_parameters(std::ofstream &data_file)
 {
     data_file << std::endl << std::endl
         << "p_good_init" << ";" << p_good_init << std::endl
 	<< "init_fraction_infected" << ";" << init_fraction_infected << std::endl
-    //    << "N" << ";" << N << std::endl
+        << "N" << ";" << N << std::endl
         << "max_time" << ";" << max_time << std::endl
         << "bmax" << ";" << bmax << std::endl
         << "c" << ";" << c << std::endl
@@ -224,13 +223,16 @@ void mutation_susceptible()
     int random_susceptible = susceptible_sampler(rng_r);
     double my_x = Susceptible[random_susceptible].x ;
 
-    if (uniform(rng_r) < mu_x)
-    {
+    //std::cout << "Mutating Susceptible " << random_susceptible << " resistance = " << my_x << std::endl; 
+
+   // if (uniform(rng_r) < mu_x)
+    //{
         std::normal_distribution <double> distribution(0.0,sdmu_x);
         my_x += distribution(rng_r); 
-    }
+   // }
     
     Susceptible[random_susceptible].x = std::clamp(my_x, 0.0, 1.0);
+   // std::cout << "Mutating Susceptible " << random_susceptible << " resistance = " << Susceptible[random_susceptible].x << std::endl; 
 
 }
 
@@ -240,14 +242,16 @@ void mutation_infected()
     int random_infected = infected_sampler(rng_r);
     double my_x = Infected[random_infected].x ;
 
-    if (uniform(rng_r) < mu_x)
-    {
+    //std::cout << "Mutating Infected " << random_infected << " resistance = " << my_x << std::endl; 
+    //if (uniform(rng_r) < mu_x)
+   // {
         std::normal_distribution <double> distribution(0.0,sdmu_x);
         my_x += distribution(rng_r); 
-    }
+   // }
     
     Infected[random_infected].x = std::clamp(my_x, 0.0, 1.0);
 
+    //std::cout << "Mutating Infected " << random_infected << " resistance = " << Infected[random_infected].x << std::endl; 
 }
 // infection event of a susceptible with a good
 // or bad plasmid
@@ -487,7 +491,7 @@ void loss_plasmid(int const I_idx, bool const plasmid_good)
 // write headers to the datafile
 void write_data_headers(std::ofstream &data_file)
 {
-    data_file << "time;mean_resistance;var_resistance;mean_plasmid_good;var_plasmid_good;Ns;Ni;mean_nplasmid;var_nplasmid;" << std::endl;
+    data_file << "time;mean_resistance_S;var_resistance_S;mean_resistance_I;var_resistance_I;mean_plasmid_good;var_plasmid_good;Ns;Ni;mean_nplasmid;var_nplasmid;" << std::endl;
 } // end write_data_headers()
 
 // fecundity function accounting for plasmid behaviour
@@ -702,9 +706,9 @@ void event_chooser(int const time_step)
     // 11. mutation of infected 
     double total_mu_Inf = mu_x * Ni ;
     total_rates[11] = total_mu_Inf; 
-/*
-    std::cout << "time: " << time_step  << std::endl;
-    for (int idx = 0; idx < total_rates.size(); idx ++)
+
+    //std::cout << "time: " << time_step  << std::endl;
+  /*  for (int idx = 0; idx < total_rates.size(); idx ++)
         {
         std::cout << "total rates [" << idx  << "] = " << total_rates[idx] << std::endl;
 	}
@@ -951,6 +955,11 @@ void event_chooser(int const time_step)
 	    {
          //   std::cout << "time: " << time_step << " mutation susceptible" << std::endl;
 		mutation_susceptible();	
+/*		for(int S_idx = 0; S_idx < Ns; S_idx++)
+		    {
+	            std::cout << "Susceptible " << S_idx << " resistance = " << Susceptible[S_idx].x << std::endl;
+		    }
+*/
 		break;
 	    }
 	case 11: //mutation infected 
@@ -970,8 +979,11 @@ void write_data(
         std::ofstream &data_file
         ,int const time_step)
 {
-    double mean_resistance = 0.0;
-    double ss_resistance = 0.0;
+    double mean_resistance_susceptible = 0.0;
+    double ss_resistance_susceptible = 0.0;
+
+    double mean_resistance_infected = 0.0;
+    double ss_resistance_infected = 0.0;
 
     double mean_freq_plasmid_good = 0.0;
     double ss_freq_plasmid_good = 0.0;
@@ -985,8 +997,8 @@ void write_data(
     {
         x = Infected[I_idx].x;
 
-        mean_resistance += x;
-        ss_resistance += x * x;
+        mean_resistance_infected += x;
+        ss_resistance_infected += x * x;
 
         p_good = Infected[I_idx].fraction_good;
 
@@ -999,18 +1011,18 @@ void write_data(
         ss_n_plasmid += n_plasmid * n_plasmid;
     }
 
-    double var_resistance = 0;
+    double var_resistance_infected = 0;
     double var_freq_plasmid_good = 0;
     double var_n_plasmid = 0;
 
     if (Ni > 0)
     {
-        mean_resistance /= Ni;
+        mean_resistance_infected /= Ni;
         mean_freq_plasmid_good /= Ni;
         mean_n_plasmid /= Ni;
 
-        var_resistance = ss_resistance / Ni 
-            - mean_resistance * mean_resistance;
+        var_resistance_infected = ss_resistance_infected / Ni 
+            - mean_resistance_infected * mean_resistance_infected;
 
         var_freq_plasmid_good = ss_freq_plasmid_good / Ni
             - mean_freq_plasmid_good * mean_freq_plasmid_good;
@@ -1019,9 +1031,29 @@ void write_data(
             - mean_n_plasmid * mean_n_plasmid;
     }
 
+    for (int S_idx = 0; S_idx < Ns; ++S_idx)
+    {
+
+        x = Susceptible[S_idx].x;
+
+        mean_resistance_susceptible += x;
+        ss_resistance_susceptible += x * x;
+    }
+
+    double var_resistance_susceptible = 0;
+
+    if (Ns > 0) 
+    	{    
+	mean_resistance_susceptible /= Ns;
+    	var_resistance_susceptible = ss_resistance_susceptible / Ns 
+            - mean_resistance_susceptible * mean_resistance_susceptible;
+	}
+	    
     data_file << time_step << ";"
-        << mean_resistance << ";"
-        << var_resistance << ";"
+        << mean_resistance_susceptible << ";"
+        << var_resistance_susceptible << ";"
+        << mean_resistance_infected << ";"
+        << var_resistance_infected << ";"
         << mean_freq_plasmid_good << ";"
         << var_freq_plasmid_good << ";"
         << Ns << ";"
@@ -1051,7 +1083,6 @@ int main(int argc, char **argv)
     {
         event_chooser(time_idx);
 	update_counters();
-//	std::cout << "what is happening????" << std::endl;
         if (time_idx % skip_output_rows == 0)
         {
             write_data(data_file, time_idx);

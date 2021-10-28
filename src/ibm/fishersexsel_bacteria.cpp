@@ -385,17 +385,14 @@ void mutate_infected(int const genotype_chr
     // what are the rates if a p allele (on either plasmid or chromosome)
     // - does not mutate
     // - mutates
-    double mu_p_ny[2] = {1.0 - mu_p, mu_p};
+            // probability of at least 1 mutation 
+            // 1 - (1-mu_p)^2*(1-mu_t)^2
+            total_mu = (1.0 - 
+                    (1.0 - mu_p)*(1.0-mu_p) * 
+                        (1.0 - (geno_has_t2[geno_inf_chr_idx] ? nu : mu_t)) *
+                        (1.0 - (geno_has_t2[geno_inf_plasmid_idx] ? nu : mu_t))) *
+                            Infected[geno_inf_chr_idx][geno_inf_plasmid_idx].size();
 
-    // what are the rates if a t allele on a chromosome
-    // - does not mutate
-    // - mutates
-    double mu_t_chr_ny[2] = {1.0 - mu_t_chr, mu_t_chr};
-
-    // what are the rates if a t allele on a plasmid
-    // - does not mutate
-    // - mutates
-    double mu_t_plasmid_ny[2] = {1.0 - mu_t_plasmid, mu_t_plasmid};
 
     // total rate in case at least 1 or more mutations happen
     // which is 1 minus the prob that 0 mutations happen

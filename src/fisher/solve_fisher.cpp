@@ -45,6 +45,11 @@ SolveFisher::SolveFisher(int argc, char **argv)
     ,has_p2{false,false,true,true}
     ,has_t2{false,true,false,true}
 {
+    // the above because
+//    t1p1 = 0,
+//    t2p1 = 1,
+//    t1p2 = 2,
+//    t2p2 = 3
     init_arguments(argc, argv);
 }
 
@@ -134,13 +139,13 @@ void SolveFisher::init_arguments(int argc, char **argv)
 
                 // by default set the infection rate to 0
                 beta_SxI[geno_recip_chr_idx][
-                    geno_donor_plm_idx][geno_donor_chr_idx] = 1.0;
+                    geno_donor_chr_idx][geno_donor_plm_idx] = 1.0;
 
                 // if recipient is choosy on either chrom or plasmid
                 // and something in donor that looks like an orament
                 if (np2_recip_chr > 0 && nt2_donor_plm + nt2_donor_chr > 0)
                 {
-                    beta_SxI[geno_recip_chr_idx][geno_donor_plm_idx][geno_donor_chr_idx] += 
+                    beta_SxI[geno_recip_chr_idx][geno_donor_chr_idx][geno_donor_plm_idx] += 
                         nt2_donor_plm + nt2_donor_chr == 1 ? 
                             ht * a // donor heterozygous t1 t2
                             :
@@ -501,7 +506,8 @@ void SolveFisher::solveSys()
         double total_force_of_infection_gainI[4][4];
 
         // total force of infection between two infected individuals
-        double total_force_of_infection_IxI[4][4][4][4];
+        double total_force_of_infection_IxI_loss[4][4];
+        double total_force_of_infection_IxI_gain[4][4];
 
         // recombination between chromosome and plasmid in infected individuals;
         double recombination_in[4][4];
@@ -511,32 +517,36 @@ void SolveFisher::solveSys()
 
         // - calculate plasmid loss rate
         // - reset force of infection calculation
-        for (int genotype_chr_idx = 0; genotype_chr_idx < 4; ++genotype_chr_idx)
+        for (int chr_idx1 = 0; chr_idx1 < 4; ++chr_idx1)
         {
-            assert(S[genotype_chr_idx] >= 0);
-            assert(S[genotype_chr_idx] <= N);
+            assert(S[chr_idx1] >= 0);
+            assert(S[chr_idx1] <= N);
 
-            total_force_of_infection_lossS[genotype_chr_idx] = 0.0;
+            total_force_of_infection_lossS[chr_idx1] = 0.0;
 
             // level 2: donor plasmid 
-            for (int genotype_plm_idx = 0; 
-                    genotype_plm_idx < 4; ++genotype_plm_idx)
+            for (int plm_idx1 = 0; 
+                    plm_idx1 < 4; ++plm_idx1)
             {
-                assert(I[genotype_chr_idx][genotype_plm_idx] >= 0);
-                assert(I[genotype_chr_idx][genotype_plm_idx] <= N);
+                assert(I[chr_idx1][plm_idx1] >= 0);
+                assert(I[chr_idx1][plm_idx1] <= N);
 
                 // set total rate of gain in I due to infections to 0 and
                 // calculate value in the next loop 
-                total_force_of_infection_gainI[genotype_chr_idx][genotype_plm_idx] = 0.0;
+                total_force_of_infection_gainI[chr_idx1][plm_idx1] = 0.0;
 
-                sum_plasmid_loss[genotype_chr_idx] += 
-                    gamma * I[genotype_chr_idx][genotype_plm_idx];
+                sum_plasmid_loss[chr_idx1] += 
+                    gamma * I[chr_idx1][plm_idx1];
             
-                recombination_in[genotype_chr_idx][genotype_plm_idx] = 
-                    recombination_out[genotype_chr_idx][genotype_plm_idx] = 0.0;
-            }
-            assert(sum_plasmid_loss[genotype_chr_idx] >= 0);
+                recombination_in[chr_idx1][plm_idx1] = 
+                    recombination_out[chr_idx1][plm_idx1] = 0.0;
 
+                total_force_of_infection_IxI_loss[chr_idx1][plm_idx1] = 0;
+
+                total_force_of_infection_IxI_gain[chr_idx1][plm_idx1] = 0;
+            
+                assert(sum_plasmid_loss[chr_idx1] >= 0);
+            }
         }
 
         assert(N > 0);
@@ -565,10 +575,37 @@ void SolveFisher::solveSys()
                         beta_SxI[genotype_chr_idx][
                             genotypeI_chromosome_idx][genotypeI_plasmid_idx
                             ] * I[genotypeI_chromosome_idx][genotypeI_plasmid_idx] / N;
+
                 }
 
             }
 
+        }
+        
+        for (int chr_idx1 = 0; chr_idx1 < 4; ++chr_idx1)
+        {
+            for (int plm_idx1 = 0; plm_idx1 < 4; ++plm_idx1)
+            {
+                for (int chr_idx2 = 0; chr_idx2 < 4; ++chr_idx2)
+                {
+                    for (int plm_idx2 = 0; plm_idx2 < 4; ++plm_idx2)
+                    {
+                        total_force_of_infection_IxI_loss[chr_idx1][plm_idx1] += 
+                            beta_IxI[chr_idx1][plm_idx1][chr_idx2][plm_idx2] *
+                                I[chr_idx2][plm_idx2] / N * I[chr_idx1][plm_idx1];
+                    }
+                }
+
+                for (int plm_recip_idx = 0; plm_recip_idx < 4; ++plm_recip_idx)
+                {
+                    for (int chr_donor_idx = 0; chr_donor_idx < 4; ++chr_donor_idx)
+                    {
+                        total_force_of_infection_IxI_gain[chr_idx1][plm_idx1] +=
+                            beta_IxI[chr_idx1][plm_recip_idx][chr_donor_idx][plm_idx1] * 
+                                I[chr_donor_idx][plm_idx1] / N * I[chr_idx1][plm_recip_idx];
+                    }
+                }
+            }
         }
 
         // then calculate the infected x infected rate
@@ -614,30 +651,30 @@ void SolveFisher::solveSys()
                         - recombination_out[geno_recip_chr_idx][geno_recip_plm_idx];
                 }
 
-                // level 3: donor chromosome
-                for (int geno_donor_chr_idx = 0; 
-                        geno_donor_chr_idx < 4; ++geno_donor_chr_idx)
-                {
-                    // level 4: donor plasmid
-                    for (int geno_donor_plm_idx = 0; 
-                            geno_donor_plm_idx < 4; ++geno_donor_plm_idx)
-                    {
-                        total_force_of_infection_IxI[
-                            geno_recip_chr_idx][
-                                geno_recip_plm_idx][
-                                    geno_donor_chr_idx][
-                                        geno_donor_plm_idx] = 
-                            beta_IxI[
-                                geno_recip_chr_idx][
-                                    geno_recip_plm_idx][
-                                        geno_donor_chr_idx][
-                                            geno_donor_plm_idx] *
-                            I[geno_recip_chr_idx][
-                                    geno_recip_plm_idx] *
-                                I[geno_donor_chr_idx][
-                                    geno_donor_plm_idx] / N;
-                    }
-                }
+//                // level 3: donor chromosome
+//                for (int geno_donor_chr_idx = 0; 
+//                        geno_donor_chr_idx < 4; ++geno_donor_chr_idx)
+//                {
+//                    // level 4: donor plasmid
+//                    for (int geno_donor_plm_idx = 0; 
+//                            geno_donor_plm_idx < 4; ++geno_donor_plm_idx)
+//                    {
+//                        total_force_of_infection_IxI[
+//                            geno_recip_chr_idx][
+//                                geno_recip_plm_idx][
+//                                    geno_donor_chr_idx][
+//                                        geno_donor_plm_idx] = 
+//                            beta_IxI[
+//                                geno_recip_chr_idx][
+//                                    geno_recip_plm_idx][
+//                                        geno_donor_chr_idx][
+//                                            geno_donor_plm_idx] *
+//                            I[geno_recip_chr_idx][
+//                                    geno_recip_plm_idx] *
+//                                I[geno_donor_chr_idx][
+//                                    geno_donor_plm_idx] / N;
+//                    }
+//                }
             }
         }
 
@@ -759,7 +796,13 @@ void SolveFisher::solveSys()
 
                     // 5. recombination
                     + recombination_in[genotype_idx][plasmid_idx]
-                    - recombination_out[genotype_idx][plasmid_idx];
+
+                    - recombination_out[genotype_idx][plasmid_idx]
+
+                    // 6. gain in infecteds from infected x infected event
+                    + 0.5 * (1.0 - pi) * total_force_of_infection_IxI_gain[genotype_idx][plasmid_idx];
+
+                - 0.5 * (1.0 - pi) * total_force_of_infection_IxI_loss[genotype_idx][plasmid_idx];
 
             } // end for plasmid_idx
 

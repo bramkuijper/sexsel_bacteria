@@ -37,24 +37,24 @@ gdb_on <- F
 r <- 1e-5 
 
 
-mu_p1 <- 1e-6 
-mu_p2 <- 1e-6
+mu_p1 <- 0
+mu_p2 <- 0
 
-mu_t1 <- 1e-6
-mu_t2 <- 1e-6
+mu_t1 <- 0
+mu_t2 <- 0
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-p2_t0 <- 0.2
-t2_t0 <- 0.5
+p2_t0 <- seq(0.1,0.9,0.1)
+t2_t0 <- seq(0.1,0.9,0.1)
 D_t0 <- 0.15
 
 max_time <- 5e08
 
 N <- 10000
 
-frac_infected <- 0.5
+frac_infected <- 0.2
 
 # preference factor
 a <- 1

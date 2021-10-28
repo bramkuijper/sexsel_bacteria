@@ -161,7 +161,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                         geno_donor_chr_idx][geno_donor_plm_idx] = 1.0;
 
                     // recipient heterozygous for p2
-                    // any ornamented donor
+                    // choosing any ornamented donor
                     if (np2_recip_chr + np2_recip_plm == 1 
                             && nt2_donor_plm + nt2_donor_chr > 0)
                     {
@@ -171,7 +171,7 @@ void SolveFisher::init_arguments(int argc, char **argv)
                                 ht * hp * a
                                 :
                                 hp * a;
-                    }
+                    }// recipient homozygous for p2
                     else if (np2_recip_chr + np2_recip_plm == 2 && 
                             nt2_donor_plm + nt2_donor_chr > 0)
                     {

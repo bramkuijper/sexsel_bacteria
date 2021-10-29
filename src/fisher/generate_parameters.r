@@ -44,8 +44,21 @@ mu_t1 <- 0
 mu_t2 <- c(0,0.01)
 
 # initial frequencies of preference and trait
-p2_t0 <- seq(0.1,0.9,0.1)
-t2_t0 <- seq(0.1,0.9,0.1)
+# vary them along a square 
+p2_t0 <- c(0.02,seq(0.1,0.9,0.1),0.98)
+t2_t0 <- p2_t0
+
+#
+#
+#init_vals_tp <- rbind(init_vals_tp, cbind(t0_val,rep(0.98,times=length(t0_val))))
+#
+#init_vals_tp <- rbind(init_vals_tp,cbind(rep(0.02,times=length(p0_val)),p0_val))
+#
+#init_vals_tp <- rbind(init_vals_tp,cbind(rep(0.98,times=length(p0_val)),p0_val))
+
+#t2_t0 <- init_vals_tp[,1]
+#p2_t0 <- init_vals_tp[,2]
+
 D_t0 <- 0.15
 
 max_time <- 5e08
@@ -131,6 +144,7 @@ combinations <- as.data.frame(
                         ,mu_p2=mu_p2
                 ,stringsAsFactors=F
                 ))
+
 
 nrows <- nrow(combinations)
 

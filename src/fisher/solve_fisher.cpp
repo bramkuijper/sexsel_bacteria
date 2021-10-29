@@ -25,6 +25,7 @@ SolveFisher::SolveFisher(int argc, char **argv)
     ,gamma{0.0}
     ,d{0.0}
     ,delta{0.0}
+    ,t_crispr{false}
     ,ht{0.0}
     ,hp{0.0}
     ,r{0.0}
@@ -80,7 +81,8 @@ void SolveFisher::init_arguments(int argc, char **argv)
     mu_p[0] = atof(argv[20]);
     mu_p[1] = atof(argv[21]);
 
-    base_name = argv[22];
+    t_crispr = atoi(argv[22]);
+    base_name = argv[23];
 
     // fill vectors for parameters that will not change
     // during the iteration, i.e., fecundity and transmission rates
@@ -145,11 +147,24 @@ void SolveFisher::init_arguments(int argc, char **argv)
                 // and something in donor that looks like an orament
                 if (np2_recip_chr > 0 && nt2_donor_plm + nt2_donor_chr > 0)
                 {
-                    beta_SxI[geno_recip_chr_idx][geno_donor_chr_idx][geno_donor_plm_idx] += 
-                        nt2_donor_plm + nt2_donor_chr == 1 ? 
-                            ht * a // donor heterozygous t1 t2
-                            :
-                            a; // donor homozygous
+                    if (!t_crispr)
+                    {
+                        beta_SxI[geno_recip_chr_idx][
+                            geno_donor_chr_idx][geno_donor_plm_idx] += 
+                                nt2_donor_plm + nt2_donor_chr == 1 ? 
+                                    ht * a // donor heterozygous t1 t2
+                                    :
+                                    a; // donor homozygous
+                    }
+                    else
+                    {
+                        beta_SxI[geno_recip_chr_idx][
+                            geno_donor_chr_idx][geno_donor_plm_idx] += 
+                                nt2_donor_plm == 1 ? 
+                                    a // donor has t2 on plasmid
+                                    :
+                                    0; // donor has no t2 on plasmid
+                    }
                 }
 
                 for (int geno_recip_plm_idx = 0; 
@@ -170,22 +185,46 @@ void SolveFisher::init_arguments(int argc, char **argv)
                     if (np2_recip_chr + np2_recip_plm == 1 
                             && nt2_donor_plm + nt2_donor_chr > 0)
                     {
-                        beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
-                            geno_donor_chr_idx][geno_donor_plm_idx] +=
-                               nt2_donor_plm + nt2_donor_chr == 1 ?
-                                ht * hp * a
-                                :
-                                hp * a;
+                        if (!t_crispr)
+                        {
+                            beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
+                                geno_donor_chr_idx][geno_donor_plm_idx] +=
+                                   nt2_donor_plm + nt2_donor_chr == 1 ?
+                                    ht * hp * a
+                                    :
+                                    hp * a;
+                        }
+                        else
+                        {
+                            beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
+                                geno_donor_chr_idx][geno_donor_plm_idx] +=
+                                   nt2_donor_plm == 1 ?
+                                    hp * a
+                                    :
+                                    0;
+                        }
                     }// recipient homozygous for p2
                     else if (np2_recip_chr + np2_recip_plm == 2 && 
                             nt2_donor_plm + nt2_donor_chr > 0)
                     {
-                        beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
-                            geno_donor_chr_idx][geno_donor_plm_idx] +=
-                               nt2_donor_plm + nt2_donor_chr == 1 ?
-                                ht * a
-                                :
-                                a;
+                        if (!t_crispr)
+                        {
+                            beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
+                                geno_donor_chr_idx][geno_donor_plm_idx] +=
+                                   nt2_donor_plm + nt2_donor_chr == 1 ?
+                                    ht * a
+                                    :
+                                    a;
+                        }
+                        else
+                        {
+                            beta_IxI[geno_recip_chr_idx][geno_recip_plm_idx][
+                                geno_donor_chr_idx][geno_donor_plm_idx] +=
+                                   nt2_donor_plm == 1 ?
+                                    a
+                                    :
+                                    0;
+                        }
                     }
                 } // end for int geno_recip_plm_idx
             } // end for geno_donor_chr_idx
@@ -318,6 +357,7 @@ void SolveFisher::write_parameters(std::ofstream &data_file)
         << "N;" << N << std::endl
         << "cp;" << cp << std::endl
         << "ct;" << ct << std::endl
+        << "t_crispr;" << t_crispr << std::endl
         << "p2_t0;" << p2_t0 << std::endl
         << "t2_t0;" << t2_t0 << std::endl
         << "D_t0;" << D_t0 << std::endl;

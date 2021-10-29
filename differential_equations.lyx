@@ -351,14 +351,8 @@ Biased mutation
 \end_layout
 
 \begin_layout Standard
-We assume that ornaments and preference alleles mutate between different
- allelic states at rates 
-\begin_inset Formula $\mu_{t_{1}\rightarrow t_{2}}=\mu_{p_{1}\rightarrow p_{2}}+\mu_{p_{2}\rightarrow p_{1}}=1\cdot10^{-6}$
-\end_inset
-
-.
- By contrast, in line with classical models of sexual selection that assume
- costly choice 
+n line with classical models of sexual selection that assume costly choice
+ 
 \end_layout
 
 \begin_layout Standard
@@ -390,6 +384,24 @@ Values of force of infection
 
  and plasmid genotype 
 \begin_inset Formula $t_{k}p_{\ell}$
+\end_inset
+
+.
+ In a scenario in which donation is based on a crispr blacklist system,
+ the signal consist of an 'ornamentation sequence' from an incoming plasmid,
+ 
+\begin_inset Formula $\delta_{c}=1$
+\end_inset
+
+, implying that signals are detected from a hemizygous donor plasmid sequence.
+ Alternatively, if a donor's signal is expressed preceding conjugation,
+ both the 
+\begin_inset Formula $t_{i}$
+\end_inset
+
+ alleles from the donor's chromosome and its plasmid may be involved.
+ This is reflected when Kronecker's delta is set to 
+\begin_inset Formula $\delta_{c}=0$
 \end_inset
 
 .
@@ -584,7 +596,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+h_{t}a$
+\begin_inset Formula $1+a\left(1-\delta_{c}+\delta_{c}h_{t}\right)$
 \end_inset
 
 
@@ -608,7 +620,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+h_{t}a$
+\begin_inset Formula $1+a\left(1-\delta_{c}+\delta_{c}h_{t}\right)$
 \end_inset
 
 
@@ -646,7 +658,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1$
+\begin_inset Formula $1+\left(1-\delta_{c}\right)h_{t}a$
 \end_inset
 
 
@@ -670,7 +682,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+h_{t}a$
+\begin_inset Formula $1+\left(1-\delta_{c}\right)h_{t}a$
 \end_inset
 
 
@@ -708,7 +720,7 @@ recipient (
 \begin_inset Text
 
 \begin_layout Plain Layout
-\begin_inset Formula $1+h_{t}a$
+\begin_inset Formula $1+a$
 \end_inset
 
 

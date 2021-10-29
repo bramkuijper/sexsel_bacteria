@@ -48,8 +48,18 @@ class SolveFisher
         long int max_time;
         double kappa;
         double gamma;
-        double d;
-        double delta;
+        double d; // baseline death rate of any individual
+        double delta; // cost of plasmid
+
+        // If t_crispr == true, ornaments are only expressed from
+        // incoming plasmid. This reflects a system in which plasmids first
+        // enter recipient and are then destroyed dependent on whether recipient
+        // likes them or not
+        // If t_crispr == false, we have a more of
+        // an environmental signaling scenario in which both alleles are expressed
+        // by a donor, as the recipient is responsive to envt'al signals rather than
+        // to signals from incoming plasmid
+        bool t_crispr; 
         double ht;
         double hp;
         double r;

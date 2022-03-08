@@ -70,6 +70,11 @@ frac_infected <- 0.2
 # preference factor
 a <- 1
 
+# whether t is crispr like or environmental
+t_crispr <- 1
+
+
+
 # preference dominance coefficient
 #h <- c(0,0.5,1)
 hp <- 0.5
@@ -142,7 +147,8 @@ combinations <- as.data.frame(
                         ,mu_t2=mu_t2
                         ,mu_p1=mu_p1
                         ,mu_p2=mu_p2
-                ,stringsAsFactors=F
+                        ,t_crispr=t_crispr
+                        ,stringsAsFactors=F # prevent strings being recoded into numbers
                 ))
 
 

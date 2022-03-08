@@ -343,7 +343,15 @@ and
 \begin_inset Formula $h_{p}$
 \end_inset
 
- reflect the 
+ reflect whether an individual is heterozygous in 
+\begin_inset Formula $t_{2}$
+\end_inset
+
+ or 
+\begin_inset Formula $p_{2}$
+\end_inset
+
+ respectively.
 \end_layout
 
 \begin_layout Paragraph
@@ -351,8 +359,8 @@ Biased mutation
 \end_layout
 
 \begin_layout Standard
-n line with classical models of sexual selection that assume costly choice
- 
+In line with classical models of sexual selection that assume costly choice,
+ we consider 
 \end_layout
 
 \begin_layout Standard

@@ -14,7 +14,7 @@ max_time <- 1e8
 # p noplasmid init
 p_noplasmid_init <- 0.5 
 
-N <- 7000
+N <- 10000
 
 # density-dependence parameter
 kappa <- 1.0 / N

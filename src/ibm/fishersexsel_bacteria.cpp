@@ -78,6 +78,16 @@ double gamma_loss = 0.0;
 // conjugation rate 
 double pi = 0.0;
 
+// whether plasmid signals only 
+// reflecting a scenario where the plasmid
+// invades the recipient and is then accepted 
+// dependent on t or not. As in crispr
+//
+// if this variable is false, however,
+// then the signal is environmental and produced by
+// the donor cell preceding the donation of the plasmid
+bool plasmid_signal_only = true;
+
 // vector to contain attractiveness
 // of individuals to homozygous recipients
 double attr_homz_recip[3] = {0.0,0.0,0.0};
@@ -129,11 +139,11 @@ std::vector < std::vector < std::vector < Individual > > > Infected;
 
 // number of infected and susceptible hosts
 //
-int Ns, Ni, N;   
+size_t Nstot, Nitot, N;   
 
 // sizes of the various classes, needed for sampling
-std::vector <int> Isizes;
-std::vector <int> Ssizes;
+std::vector <int> Ni;
+std::vector <int> Ns;
 
 //// vector of attractiveness for all individuals 
 //// from the perspective of a focal with homozygote preference 
@@ -154,9 +164,13 @@ std::vector <int> Ssizes;
 // second index: p
 int alleles2genotypenr[2][2] = {{0,2},{1,3}};
 
+// 
 bool geno_has_t2[4] = {0,1,0,1};
 bool geno_has_p2[4] = {0,0,1,1};
 
+// integer division  - this is needed to deal with
+// a multivariate cumulative distribution which we have
+// in a unidimensional array (see below)
 int integer_division(int const x, int const y)
 {
     return((int) floor((double) x / y));
@@ -165,7 +179,7 @@ int integer_division(int const x, int const y)
 // calculate attractiveness of Infected individual
 // with given genotype
 // for Susceptible with given genotype 
-double calc_attract_susceptible(
+double attractiveness_S_recipient_I_donor(
         int const geno_susceptible
         ,int const geno_chr_infected
         ,int const geno_plasmid_infected)
@@ -184,13 +198,20 @@ double calc_attract_susceptible(
     }
 
     // check if infected has trait
-    int n_trait_alleles = geno_has_t2[geno_chr_infected] + 
-        geno_has_t2[geno_plasmid_infected]; 
+    int n_trait_alleles = geno_has_t2[geno_chr_infected];
 
+    if (!plasmid_signal_only)
+    {
+        n_trait_alleles += geno_has_t2[geno_plasmid_infected]; 
+    }
+
+    // return the attractiveness of this individual
+    // dependent on the number of trait alleles
     return(attr_homz_recip[n_trait_alleles]);
-} // end calc_attractiveness
+} // end attractiveness_S_recipient_I_donor
 
-double calc_attract_infected(
+
+double attractiveness_I_recipient_I_donor(
         int const geno_chr_infected_recipient
         ,int const geno_plasmid_infected_recipient
         ,int const geno_chr_infected_donor
@@ -215,24 +236,29 @@ double calc_attract_infected(
         return(1.0);
     }
 
-    int n_trait_alleles = geno_has_t2[geno_chr_infected_donor] 
-        + geno_has_t2[geno_plasmid_infected_donor]; 
+
+    int n_trait_alleles = geno_has_t2[geno_chr_infected_donor];
+    
+    if (!plasmid_signal_only)
+    {
+        n_trait_alleles += geno_has_t2[geno_plasmid_infected_donor]; 
+    }
 
     return(n_pref_alleles == 2 ?
             attr_homz_recip[n_trait_alleles]
             :
             attr_hetz_recip[n_trait_alleles]);
-}
+} // end attractiveness_I_recipient_I_donor
 
 // initialize population
 void init_pop()
 {
     // calculate number of susceptibles
-    Ns = round(N*p_noplasmid_init);  
+    Nstot = round(N*p_noplasmid_init);  
 
-    Ni = N - Ns;
+    Nitot = N - Nstot;
 
-    assert(Ni >= 0);
+    assert(Nitot >= 0);
 
     bool allele_chr_is_p2;
     bool allele_chr_is_t2;
@@ -243,29 +269,40 @@ void init_pop()
     // frequencies (assuming no LD, that will be built up
     // stochastically anyway)
 
-    std::vector <Individual> v;
+    // standard individual
+//    std::vector <Individual> v;
 
+    // initialize the vectors that should contain the numbers of 
+    // susceptibles
     for (int i = 0; i < 4; ++i)
     {
-        Susceptible.push_back(v);
-        Ssizes.push_back(0);
+//        Susceptible.push_back(v);
 
+        // initialize the array of the different susceptible
+        // (4 genotypes in total)
+        // population sizes with 0s
+        Ns.push_back(0);
+
+        // initialize the array of the different infected
+        // (4 x 4 genotypes in total)
+        // population sizes with 0s
         for (int j = 0; j < 4; ++j)
         {
-            Isizes.push_back(0);
+            Ni.push_back(0);
         }
     }
 
-    for (int j = 0; j < 4; ++j)
-    {
-        // and initialize 4x4 infecteds
-        // by re-using empty susceptible vector
-        Infected.push_back(Susceptible);
-    }
+//    for (int j = 0; j < 4; ++j)
+//    {
+//        // and initialize 4x4 infecteds
+//        // by re-using empty susceptible vector
+// //       Infected.push_back(Susceptible);
+//    }
 
     // initialize susceptibles vectors
-    for (int S_idx = 0; S_idx < Ns; ++S_idx)
+    for (size_t S_idx = 0; S_idx < Nstot; ++S_idx)
     {
+        // randomly determine all alleles on chromosome
         allele_chr_is_p2 = uniform(rng_r) < init_p2;
         allele_chr_is_t2 = uniform(rng_r) < init_t2;
 
@@ -278,7 +315,7 @@ void init_pop()
 
         Susceptible[genotype_chr].push_back(init_ind);
         assert(Susceptible[genotype_chr].size() > 0);
-    }// for (int S_idx = 0; S_idx < Ns; ++S_idx)
+    }// for (int S_idx = 0; S_idx < Nstot; ++S_idx)
 
     bool allele_plm_is_p2;
     bool allele_plm_is_t2;
@@ -286,8 +323,9 @@ void init_pop()
     int genotype_plasmid;
 
     // initialize infected individuals
-    for (int I_idx = 0; I_idx < Ni; ++I_idx)
+    for (size_t I_idx = 0; I_idx < Nitot; ++I_idx)
     {
+        // randomly determine all alleles on chromosome and plasmid
         allele_chr_is_p2 = uniform(rng_r) < init_p2;
         allele_chr_is_t2 = uniform(rng_r) < init_t2;
         allele_plm_is_p2 = uniform(rng_r) < init_p2;
@@ -305,7 +343,7 @@ void init_pop()
         genotype_plasmid = alleles2genotypenr[allele_plm_is_t2][allele_plm_is_p2];
 
         Infected[genotype_chr][genotype_plasmid].push_back(init_ind);
-	assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
+        assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
     }
 }//end void init_pop() 
 
@@ -329,7 +367,7 @@ void recombine_infected(int const genotype_chr
     assert(allele_p_chr != allele_p_plasmid);
 
     assert(Infected[genotype_chr][genotype_plasmid].size() > 0);
-    assert(Infected[genotype_chr][genotype_plasmid].size() <= Ni);
+    assert(Infected[genotype_chr][genotype_plasmid].size() <= Nitot);
     
     int new_genotype_chr;
     int new_genotype_plasmid;
@@ -368,6 +406,9 @@ void recombine_infected(int const genotype_chr
     Infected[new_genotype_chr][new_genotype_plasmid].push_back(ind1);
 } // end recombine_infected
 
+
+// calculate the type of mutation that will be occurring to an infected
+// cell with chromosomal genotype genotype_chr and plasmid genotype genotype_plasmid
 void mutate_infected(int const genotype_chr
         ,int const genotype_plasmid)
 {
@@ -382,17 +423,15 @@ void mutate_infected(int const genotype_chr
     double mu_t_chr = geno_has_t2[genotype_chr] ? nu : mu_t;
     double mu_t_plasmid = geno_has_t2[genotype_plasmid] ? nu : mu_t;
 
+    double mu_p_ny[2] = {1.0 - mu_p,mu_p};
+    double mu_t_chr_ny[2] = {1.0 - mu_t_chr,mu_t_chr};
+    double mu_t_plasmid_ny[2] = {1.0 - mu_t_plasmid,mu_t_plasmid};
+
     // what are the rates if a p allele (on either plasmid or chromosome)
     // - does not mutate
     // - mutates
-            // probability of at least 1 mutation 
-            // 1 - (1-mu_p)^2*(1-mu_t)^2
-            total_mu = (1.0 - 
-                    (1.0 - mu_p)*(1.0-mu_p) * 
-                        (1.0 - (geno_has_t2[geno_inf_chr_idx] ? nu : mu_t)) *
-                        (1.0 - (geno_has_t2[geno_inf_plasmid_idx] ? nu : mu_t))) *
-                            Infected[geno_inf_chr_idx][geno_inf_plasmid_idx].size();
-
+    // probability of at least 1 mutation 
+    // 1 - (1-mu_p)^2*(1-mu_t)^2 
 
     // total rate in case at least 1 or more mutations happen
     // which is 1 minus the prob that 0 mutations happen
@@ -404,6 +443,7 @@ void mutate_infected(int const genotype_chr
     double cumul_sum_mut = 0.0;
 
     bool done = false;
+
 
     // build cumulative distribution
     // go through all the options
@@ -541,7 +581,7 @@ void mutate_susceptible(int const genotype)
     }// end switch
 
     assert(Susceptible[genotype].size() > 0);
-    assert(Susceptible[genotype].size() <= Ns);
+    assert(Susceptible[genotype].size() <= Nstot);
 
     Individual mutated_ind = Susceptible[genotype][0];
 
@@ -684,9 +724,9 @@ void conjugation_infected(
     assert(donor_plasmid < 4);
 
     assert(Infected[recipient_chromosome][recipient_plasmid].size() > 0);
-    assert(Infected[recipient_chromosome][recipient_plasmid].size() <= Ni);
+    assert(Infected[recipient_chromosome][recipient_plasmid].size() <= Nitot);
     assert(Infected[donor_chromosome][donor_plasmid].size() > 0);
-    assert(Infected[donor_chromosome][donor_plasmid].size() <= Ni);
+    assert(Infected[donor_chromosome][donor_plasmid].size() <= Nitot);
 
     // infected host receives a plasmid next to one it already has
     // now we have to randomly choose between 2 plasmids
@@ -709,8 +749,8 @@ void conjugation_infected(
 void loss_plasmid()
 {
     std::discrete_distribution<int> infected_dist(
-            Isizes.begin()
-            ,Isizes.end()
+            Ni.begin()
+            ,Ni.end()
             );
 
     int random_class = infected_dist(rng_r);
@@ -759,8 +799,8 @@ void birth_infected(int const genotype_chr
 void death_susceptible()
 {
     std::discrete_distribution <int> susceptible_dist(
-            Ssizes.begin()
-            ,Ssizes.end());
+            Ns.begin()
+            ,Ns.end());
 
     int susceptible_genotype_idx = susceptible_dist(rng_r);
 
@@ -774,8 +814,8 @@ void death_susceptible()
 void death_infected()
 {
     std::discrete_distribution <int> infected_dist(
-            Isizes.begin()
-            ,Isizes.end());
+            Ni.begin()
+            ,Ni.end());
 
     int random_infected_idx = infected_dist(rng_r);
 
@@ -783,7 +823,7 @@ void death_infected()
     int infected_chr_idx = integer_division(random_infected_idx, 4) % 4;
 
     assert(Infected[infected_chr_idx][infected_plasmid_idx].size() > 0);
-    assert(Infected[infected_chr_idx][infected_plasmid_idx].size() <= Ni);
+    assert(Infected[infected_chr_idx][infected_plasmid_idx].size() <= Nitot);
 
     Infected[infected_chr_idx][infected_plasmid_idx].pop_back();
 
@@ -819,8 +859,8 @@ void write_data_headers(std::ofstream &data_file)
     }
 
     data_file
-        << "Ns;"
-        << "Ni;"
+        << "Nstot;"
+        << "Nitot;"
         << "N;"
         << "mean_freq_p2_total;"
         << "mean_freq_p2_susceptible;"
@@ -859,31 +899,31 @@ double b_Infected(bool const trait_pl
 // update all the counts
 void update_counters()
 {
-    Ns = 0;
-    Ni = 0;
+    Nstot = 0;
+    Nitot = 0;
 
     int Iidx = 0;
 
     for (int geno_chr_idx = 0; geno_chr_idx < 4; ++geno_chr_idx)
     {
-        Ns += Ssizes[geno_chr_idx] = Susceptible[geno_chr_idx].size();
+        Nstot += Ns[geno_chr_idx] = Susceptible[geno_chr_idx].size();
 
         for (int geno_plasmid_idx = 0; geno_plasmid_idx < 4; ++geno_plasmid_idx)
         {
-            Ni += Isizes[Iidx] = Infected[geno_chr_idx][geno_plasmid_idx].size();
+            Nitot += Ni[Iidx] = Infected[geno_chr_idx][geno_plasmid_idx].size();
 
             ++Iidx;
         }
     }
 
-    assert(Ns + Ni <= N);
+    assert(Nstot + Nitot <= N);
 } // end update counters
 
 // setup a distribution of events and choose
 // which event to do
 void event_chooser(int const time_step)
 {
-    // first update values of Ns and Ni
+    // first update values of Nstot and Nitot
     update_counters();
 
     // make a vector of total rates 
@@ -939,28 +979,28 @@ void event_chooser(int const time_step)
     
     std::vector <double> force_infection_infected;
     
-    if (Ns == 0 && Ni == 0)
+    if (Nstot == 0 && Nitot == 0)
     {
         std::cout << "time: " << time_step << "  --> Population extinct!" << std::endl;
         exit(1);
     }
 
-    if (Ni == 0)
+    if (Nitot == 0)
     {
-        std::cout << "time: " << time_step << "  --> Ni extinct" << std::endl;
+        std::cout << "time: " << time_step << "  --> Nitot extinct" << std::endl;
         exit(1);
     }
 
     // aux variable to have mass-action in the infection rates
     // this is according to frequency-dependence/mass action 
     // (p17 in Keeling & Rohani)
-    double inv_popsize = 1.0 / (Ns + Ni);
+    double inv_popsize = 1.0 / (Nstot + Nitot);
 
     // aux variable for the force of infection
     double force_infection_ij;
 
     // density dependent correction of growth rates
-    double dens_dep = 1.0 - kappa * (Ns + Ni);
+    double dens_dep = 1.0 - kappa * (Nstot + Nitot);
 
     double birth_rate_i;
 
@@ -996,7 +1036,7 @@ void event_chooser(int const time_step)
                     geno_inf_plasmid_idx < 4; ++geno_inf_plasmid_idx)
             {
                 force_infection_ij = (1.0 - pi) * 
-                           calc_attract_susceptible(
+                           attractiveness_S_recipient_I_donor(
                                 geno_sus_chr_idx
                                ,geno_inf_chr_idx 
                                ,geno_inf_plasmid_idx) * inv_popsize 
@@ -1101,7 +1141,7 @@ void event_chooser(int const time_step)
     } // end for geno_inf_chr_idx
 
     // 3. loss of plasmid
-    total_rates[3] += gamma_loss * Ni;  
+    total_rates[3] += gamma_loss * Nitot;  
 
     // 4. conjugation between infected and infected
     // 16 x 16 = 256 combinations
@@ -1118,9 +1158,9 @@ void event_chooser(int const time_step)
                         geno_inf_donor_plasmid_idx < 4; ++geno_inf_donor_plasmid_idx)
                 {
                     assert(Infected[geno_inf_recip_chr_idx][geno_inf_recip_plasmid_idx].size() >= 0);
-                    assert(Infected[geno_inf_recip_chr_idx][geno_inf_recip_plasmid_idx].size() <= Ni);
+                    assert(Infected[geno_inf_recip_chr_idx][geno_inf_recip_plasmid_idx].size() <= Nitot);
                     force_infection_ij = (1.0 - pi) * inv_popsize *
-                        calc_attract_infected(geno_inf_recip_chr_idx
+                        attractiveness_I_recipient_I_donor(geno_inf_recip_chr_idx
                                 ,geno_inf_recip_plasmid_idx
                                 ,geno_inf_donor_chr_idx
                                 ,geno_inf_donor_plasmid_idx) * 
@@ -1137,12 +1177,12 @@ void event_chooser(int const time_step)
     } // end for int inf_idx;
 
     // 5. Deaths susceptibles
-    double death_rate_S = Ns * d;
+    double death_rate_S = Nstot * d;
 
     total_rates[5] = death_rate_S;
 
     // 6. death rate infected
-    double death_rate_I = Ni * d; 
+    double death_rate_I = Nitot * d; 
 
     total_rates[6] = death_rate_I;
 
@@ -1184,8 +1224,8 @@ void event_chooser(int const time_step)
             // to determine the individual that gives birth
             susceptible_genotype_idx = birth_susc_distribution(rng_r);
 
-            // note that S_idx is an index from 0 to Ns - 1
-            // thus it does not include Ns itself
+            // note that S_idx is an index from 0 to Nstot - 1
+            // thus it does not include Nstot itself
             assert(susceptible_genotype_idx >= 0);
             assert(susceptible_genotype_idx < 4);
 
@@ -1402,7 +1442,7 @@ void write_data(std::ofstream &data_file
             genotype_chr_idx < 4; ++genotype_chr_idx) 
     {
         assert(Susceptible[genotype_chr_idx].size() >= 0);
-        assert(Susceptible[genotype_chr_idx].size() <= Ns);
+        assert(Susceptible[genotype_chr_idx].size() <= Nstot);
         data_file << Susceptible[genotype_chr_idx].size() << ";";
 
         // calculate allele freqs
@@ -1430,7 +1470,7 @@ void write_data(std::ofstream &data_file
                 genotype_plasmid_idx < 4; ++genotype_plasmid_idx)
         {
             assert(Infected[genotype_chr_idx][genotype_plasmid_idx].size() >= 0);
-            assert(Infected[genotype_chr_idx][genotype_plasmid_idx].size() <= Ni);
+            assert(Infected[genotype_chr_idx][genotype_plasmid_idx].size() <= Nitot);
 
             data_file << Infected[genotype_chr_idx][genotype_plasmid_idx].size() << ";";
             
@@ -1476,45 +1516,45 @@ void write_data(std::ofstream &data_file
         }
     }
 
-    assert(mean_freq_p2_total <= Ns + 2 * Ni);
-    assert(mean_freq_p2_susceptible <= Ns);
-    assert(mean_freq_p2_infected <= 2*Ni);
-    assert(mean_freq_p2_chr <= Ni + Ns);
-    assert(mean_freq_p2_plasmid <= Ni);
+    assert(mean_freq_p2_total <= Nstot + 2 * Nitot);
+    assert(mean_freq_p2_susceptible <= Nstot);
+    assert(mean_freq_p2_infected <= 2*Nitot);
+    assert(mean_freq_p2_chr <= Nitot + Nstot);
+    assert(mean_freq_p2_plasmid <= Nitot);
 
-    assert(mean_freq_t2_total <= Ns + 2 * Ni);
-    assert(mean_freq_t2_susceptible <= Ns);
-    assert(mean_freq_t2_infected <= 2*Ni);
-    assert(mean_freq_t2_chr <= Ni + Ns);
-    assert(mean_freq_t2_plasmid <= Ni);
+    assert(mean_freq_t2_total <= Nstot + 2 * Nitot);
+    assert(mean_freq_t2_susceptible <= Nstot);
+    assert(mean_freq_t2_infected <= 2*Nitot);
+    assert(mean_freq_t2_chr <= Nitot + Nstot);
+    assert(mean_freq_t2_plasmid <= Nitot);
     
-    mean_freq_p2_total /= Ns + 2 * Ni;
+    mean_freq_p2_total /= Nstot + 2 * Nitot;
     
-    mean_freq_p2_susceptible /= Ns;
+    mean_freq_p2_susceptible /= Nstot;
 
-    if (Ns < 1)
+    if (Nstot < 1)
     {
         mean_freq_p2_susceptible = 0;
     }
 
-    mean_freq_p2_infected /= 2*Ni;
-    mean_freq_p2_plasmid /= Ni;
-    mean_freq_p2_chr /= Ni + Ns;
+    mean_freq_p2_infected /= 2*Nitot;
+    mean_freq_p2_plasmid /= Nitot;
+    mean_freq_p2_chr /= Nitot + Nstot;
 
-    mean_freq_t2_total /= Ns + 2 * Ni;
-    mean_freq_t2_susceptible /= Ns;
+    mean_freq_t2_total /= Nstot + 2 * Nitot;
+    mean_freq_t2_susceptible /= Nstot;
     
-    if (Ns < 1)
+    if (Nstot < 1)
     {
         mean_freq_t2_susceptible = 0;
     }
-    mean_freq_t2_infected /= 2*Ni;
-    mean_freq_t2_plasmid /= Ni;
-    mean_freq_t2_chr /= Ni + Ns;
+    mean_freq_t2_infected /= 2*Nitot;
+    mean_freq_t2_plasmid /= Nitot;
+    mean_freq_t2_chr /= Nitot + Nstot;
 
 	data_file 
-        << Ns << ";"
-        << Ni << ";"
+        << Nstot << ";"
+        << Nitot << ";"
         << N << ";"
         << mean_freq_p2_total << ";"
         << mean_freq_p2_susceptible << ";"

@@ -23,11 +23,10 @@ library("gridExtra")
 #    print("Usage: /path/plot_single_simulation.r output_file_blabla.csv")
 #    stop()
 #}
-path.name = "lambda_1"
+
 # list of simulation output files
 files <- list.files(
-        path=path.name, recursive = T,
-	full.names=T,
+        path=".",
         pattern="^sim_bact_sexsel.*?\\.csv$")
 
 print(files)
@@ -96,7 +95,6 @@ find_out_param_line <- function(filename)
 data.first <- F
 the.data <-NULL
 the.base.name <- NULL
-the.dir.name <- NULL
 
 for (f_idx in 1:length(files)) 
 {
@@ -115,14 +113,26 @@ for (f_idx in 1:length(files))
 	{
 	    # read in data frame of corresponding simulation
 	    parameter_row <- find_out_data_start(files[f_idx])
-            the.base.name <- basename(files[f_idx])
-            the.dir.name <- dirname(files[f_idx])
-            the.data <- read.table(files[f_idx], header=T, skip=parameter_row - 1, sep=";")
-	    if(max(the.data$time) > 1e+6)
-		{
-		the.data <- the.data[seq(1,nrow(the.data),100), ]
-		}
+	    if(f_idx ==1) { 
+                          the.base.name <- basename(files[f_idx])
+		    	  the.data <- read.table(files[f_idx], header=T, skip=parameter_row - 1, sep=";")
+	    	          the.data$rep = rep(f_idx, nrow(the.data))
+			  if(max(the.data$time) > 1e+6)
+				{
+				the.data <- the.data[seq(1,nrow(the.data),100), ]
+				}
+	    		  }
+	    else {
+		 tmp <- read.table(files[f_idx], header=T, skip=parameter_row - 1, sep=";")
+	    	 tmp$rep = rep(f_idx, nrow(tmp))
+	         if(max(tmp$time) > 1e+6)
+			{
+			tmp <- tmp[seq(1,nrow(tmp),100), ]
+			}
+		 the.data <- rbind(the.data, tmp)
+		 }
 	}
+} # end for file loop
 
 mytheme <- theme_classic() + 
 	   theme(axis.text = element_text(size=14), 
@@ -137,8 +147,8 @@ mytheme <- theme_classic() +
 # first plot: mean_preference
 p1 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = Ns, colour="Susceptible")) +
-	    geom_line(aes(y = Ni, colour = "Infected")) + 
+	    geom_line(aes(y = Ns, group = rep, colour="Susceptible")) +
+	    geom_line(aes(y = Ni, group = rep, colour = "Infected")) + 
 	    mytheme + 
 	    xlab("Generation") + 
 	    #ylim(c(0,10)) +
@@ -146,8 +156,8 @@ p1 <- ggplot(data=the.data
 
 p2 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = mean_freq_p2_total, colour="Overall frequency p2")) +
-	    geom_line(aes(y = mean_freq_t2_total, colour="Overall frequency t2")) +
+	    geom_line(aes(y = mean_freq_p2_total, group=rep, colour="Overall frequency p2")) +
+	    geom_line(aes(y = mean_freq_t2_total, group=rep, colour="Overall frequency t2")) +
 	    mytheme + 
 	    xlab("Generation") + 
 	    ylab("Overall allele frequencies") +
@@ -155,17 +165,17 @@ p2 <- ggplot(data=the.data
 	    
 p3 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = mean_freq_p2_susceptible, colour="Freq p2 Susceptible")) +
-	    geom_line(aes(y = mean_freq_t2_susceptible, colour="Freq t2 susceptible")) +
+	    geom_line(aes(y = mean_freq_p2_susceptible, group=rep, colour="Freq p2 Susceptible")) +
+	    geom_line(aes(y = mean_freq_t2_susceptible, group=rep, colour="Freq t2 susceptible")) +
 	    xlab("Generation") + 
-	    ylab("Allele frequencies in Susceptibles") +
+	    ylab("Alle frequencies in Susceptibles") +
 	    ylim(0,1) +
 	    mytheme  
 
 p4 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = mean_freq_p2_infected, colour="Freq p2 infected")) +
-	    geom_line(aes(y = mean_freq_t2_infected, colour="Freq t2 infected")) +
+	    geom_line(aes(y = mean_freq_p2_infected, group=rep, colour="Freq p2 infected")) +
+	    geom_line(aes(y = mean_freq_t2_infected, group=rep, colour="Freq t2 infected")) +
 	    xlab("Generation") + 
 	    ylab("Allele frequencies in Infected") +
 	    ylim(0,1) +
@@ -173,8 +183,8 @@ p4 <- ggplot(data=the.data
 
 p5 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = mean_freq_p2_plasmid, colour="Freq p2 plasmid")) +
-	    geom_line(aes(y = mean_freq_t2_plasmid, colour="Freq t2 plasmid")) +
+	    geom_line(aes(y = mean_freq_p2_plasmid, group=rep, colour="Freq p2 plasmid")) +
+	    geom_line(aes(y = mean_freq_t2_plasmid, group=rep, colour="Freq t2 plasmid")) +
 	    xlab("Generation") + 
 	    ylab("Allele frequencies in plasmid") +
 	    ylim(0,1) +
@@ -182,59 +192,44 @@ p5 <- ggplot(data=the.data
 
 p6 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = mean_freq_p2_chr, colour="Freq p2 chromosome")) +
-	    geom_line(aes(y = mean_freq_t2_chr, colour="Freq t2 chromosome")) +
+	    geom_line(aes(y = mean_freq_p2_chr, group=rep, colour="Freq p2 chromosome")) +
+	    geom_line(aes(y = mean_freq_t2_chr, group=rep, colour="Freq t2 chromosome")) +
 	    xlab("Generation") + 
 	    ylab("Allele frequencies in chromosome") +
 	    ylim(0,1)+ 
 	    mytheme  
-   
 p7 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = St1p1, colour="St1p1")) +
-	    geom_line(aes(y = St2p1, colour="St2p1")) +
-	    geom_line(aes(y = St1p2, colour="St1p2")) +
-	    geom_line(aes(y = St2p2, colour="St2p2")) +
+	    geom_line(aes(y = St1p1, group=rep, colour="St1p1")) +
+	   # geom_line(aes(y = St2p1, group=rep, colour="St2p1")) +
+	    geom_line(aes(y = St1p2, group=rep, colour="St1p2")) +
+	   # geom_line(aes(y = St2p2, group=rep, colour="St2p2")) +
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
 	    mytheme  
 
 p8 <- ggplot(data=the.data
 	,aes(x=time)) +
-	    geom_line(aes(y = It1p1t1p1,  colour="It1p1t1p1")) +
-	    geom_line(aes(y = It2p1t1p1, colour="It2p1t1p1")) +
-	    geom_line(aes(y = It1p2t1p1, colour="It1p2t1p1")) +
-	    geom_line(aes(y = It2p2t1p1, colour="It2p2t1p1")) +
-	    xlab("Generation") + 
-	    ylab("Abs frequencies Susceptible genotypes") +
-	    mytheme  
+	    geom_line(aes(y = It1p1t1p1, group=rep, colour="It1p1t1p1")) +
+	   # geom_line(aes(y = It2p1t1p1, colour="It2p1t1p1")) +
+	    geom_line(aes(y = It1p2t1p1, group=rep,colour="It1p2t1p1")) +
+	    geom_line(aes(y = It2p2t1p1, group=rep,colour="It2p2t1p1")) +
 
-p9 <- ggplot(data=the.data
-	,aes(x=time)) +
-	    geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
-	    geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
-	    geom_line(aes(y = It1p2t2p1, colour="It1p2t2p1")) +
-	    geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
-	    xlab("Generation") + 
-	    ylab("Abs frequencies Susceptible genotypes") +
-	    mytheme  
+	   # geom_line(aes(y = It1p1t2p1, colour="It1p1t2p1")) +
+	   # geom_line(aes(y = It2p1t2p1, colour="It2p1t2p1")) +
+	    geom_line(aes(y = It1p2t2p1, group=rep,colour="It1p2t2p1")) +
+	   # geom_line(aes(y = It2p2t2p1, colour="It2p2t2p1")) +
 
-p10 <- ggplot(data=the.data
-	,aes(x=time)) +
-	    geom_line(aes(y = It1p1t1p2, colour="It1p1t1p2")) +
-	    geom_line(aes(y = It2p1t1p2, colour="It2p1t1p2")) +
-	    geom_line(aes(y = It1p2t1p2, colour="It1p2t1p2")) +
-	    geom_line(aes(y = It2p2t1p2, colour="It2p2t1p2")) +
-	    xlab("Generation") + 
-	    ylab("Abs frequencies Susceptible genotypes") +
-	    mytheme  
+	   # geom_line(aes(y = It1p1t1p2, colour="It1p1t1p2")) +
+	   # geom_line(aes(y = It2p1t1p2, colour="It2p1t1p2")) +
+	   # geom_line(aes(y = It1p2t1p2, colour="It1p2t1p2")) +
+	   # geom_line(aes(y = It2p2t1p2, colour="It2p2t1p2")) +
 
-p11 <- ggplot(data=the.data
-	,aes(x=time)) +
-	    geom_line(aes(y = It1p1t2p2, colour="It1p1t2p2")) +
-	    geom_line(aes(y = It2p1t2p2, colour="It2p1t2p2")) +
-	    geom_line(aes(y = It1p2t2p2, colour="It1p2t2p2")) +
-	    geom_line(aes(y = It2p2t2p2, colour="It2p2t2p2")) +
+	   # geom_line(aes(y = It1p1t2p2, colour="It1p1t2p2")) +
+	   # geom_line(aes(y = It2p1t2p2, colour="It2p1t2p2")) +
+	   # geom_line(aes(y = It1p2t2p2, colour="It1p2t2p2")) +
+	   # geom_line(aes(y = It2p2t2p2, colour="It2p2t2p2")) +
+
 	    xlab("Generation") + 
 	    ylab("Abs frequencies Susceptible genotypes") +
 	    mytheme  
@@ -245,16 +240,14 @@ big_plot <- arrangeGrob(p1,
 						p4, p5,	
 						p6,
 						p7, p8,
-						p9, p10, p11,
-						nrow=3,ncol=4)
+						nrow=2,ncol=4)
 
 
-output_file_name <- paste(the.dir.name,
-	"/graph_"
+output_file_name <- paste(
+	"graph_"
 	,the.base.name
-	,".jpeg"
+	,".pdf"
 	,sep="")
 
 ggsave(output_file_name, big_plot, width=25,height = 15)
 
-}# end for file loop

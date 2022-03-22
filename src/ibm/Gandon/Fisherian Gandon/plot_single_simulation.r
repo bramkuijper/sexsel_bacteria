@@ -23,11 +23,9 @@ library("gridExtra")
 #    print("Usage: /path/plot_single_simulation.r output_file_blabla.csv")
 #    stop()
 #}
-path.name = "lambda_1"
 # list of simulation output files
 files <- list.files(
-        path=path.name, recursive = T,
-	full.names=T,
+        path=".", 
         pattern="^sim_bact_sexsel.*?\\.csv$")
 
 print(files)
@@ -118,12 +116,12 @@ for (f_idx in 1:length(files))
             the.base.name <- basename(files[f_idx])
             the.dir.name <- dirname(files[f_idx])
             the.data <- read.table(files[f_idx], header=T, skip=parameter_row - 1, sep=";")
-	    if(max(the.data$time) > 1e+6)
-		{
-		the.data <- the.data[seq(1,nrow(the.data),100), ]
-		}
+#	    if(max(the.data$time) > 1e+6)
+#		{
+#		the.data <- the.data[seq(1,nrow(the.data),100), ]
+#		}
 	}
-
+str(the.data)
 mytheme <- theme_classic() + 
 	   theme(axis.text = element_text(size=14), 
 	   axis.title=element_text(size=14), 

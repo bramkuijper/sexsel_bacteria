@@ -6,15 +6,15 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1
+nrep <- 1 
 
 # maximum number of times
-max_time <- 1e8
+max_time <- 1e9
 
 # p noplasmid init
-p_noplasmid_init <- 0.5 
+p_noplasmid_init <- 0.9 
 
-N <- 10000
+N <- 7000
 
 # density-dependence parameter
 kappa <- 1.0 / N
@@ -23,71 +23,79 @@ kappa <- 1.0 / N
 bmax <- 50
 
 # cost of preference 
-c <- c(0.00,0.01)
-
-
-# clearance rate good plasmid
-loss_gamma <- 0.01
+c <- 0.01
 
 # cost of trait
-#epsilon <- c(0.001,0.01, 0.1)
 epsilon <- 0.0
 
 # cost of plasmid
-#delta <- c(0.01,0.1)
-delta <- 0.01
+delta <- 0.0
 
-# conjugation rate 
-#psi <- c(0.01,0.05,0.1) 
-pi_inf <- 0.95 
+# co-infection probablity
+sigma <- 0.0
+
+# resistance
+pi <- 0.5 
+
+# plasmid acceptance probability (once conjugation happened) 
+lambda <- 1.0 
 
 # death rates
-d <- 0.01 
+d <- 1 
+d_t2 <- 2 
 
 # recombination rate
-r <- 1e-6
-
-# chromosomal integration rate
-tau <- 0.0
+r <- 0.0 
 
 # mutation rate
-#mu <- c(0.001,0.01)
-#mu_t_bias <- c(0.001,0.01)
+#mu_p <- c(0.001,0.01)
+#mu_t <- c(0.001,0.01)
 
-mu_p <- 1e-6
-mu_t_bias <- 1e-5
-mu_t <- 1e-6
+mu_p_chr <- 1e-5 
+mu_t_chr <- 0.0 
+mu_p_plasmid <- 0.0 
+mu_t_plasmid <- 1e-5 
+nu <- 1e-5 
 
 # initial frequencies of preference and trait
-#init_p2 <- c(0.01,0.1,0.8)
-#init_t2 <- c(0.01,0.1,0.8)
-init_p2 <- c(0.01,seq(0.1,0.9,0.1),0.99)
-init_t2 <- c(0.01,seq(0.1,0.9,0.1),0.99)
-
-# plasmid formation rate
-lambda <- 0.0
+init_p2_chr <- 0.1
+init_t2_chr <- 0.0
+init_p2_plasmid <- 0.0
+init_t2_plasmid <- 0.1
 
 # preference factor
 #alpha <- c(0.001,0.01,0.1)
-alpha <- 2
+alpha <-0.0 
 
 # preference dominance coefficient
-#h <- c(0,0.5,1)
-h <- 0.5
+h <- 1.0 
 
 # trait dominance coefficient
-#l <- c(0,0.5,1)
-l <- 0.5
+l <- 1.0
 
-# ornament signal from plasmid
-plasmid_signal_only = 1
+#force infection t1 and t2 plasmids
+# currently not necessary?
+psi_t1 <- 0.0
+psi_t2 <- 0.0
+
+# fitness coefficient for t1 and t2 plasmids 
+f_t1 <- 1.0
+f_t2 <- 0.1
+
+#coefficient for force of infection t1 and t2 plasmids
+beta_t1 <- 1.0
+beta_t2 <- 5.0
+
+# clearance rate plasmid
+gamma_loss_t1 <- 1
+gamma_loss_t2 <- 0
 
 # get the directory name of this script
 # we use this so that we can
 script.dir <- getwd()
 
 # executable
-exe <- "./fishersexsel_bacteria.exe"
+exe <- "./fishersexsel_Gandon.exe"
 
 # save current time point to make
 # filenames that contain a time stamp
@@ -124,24 +132,35 @@ combinations <- as.data.frame(
                 ,kappa=kappa
                 ,bmax=bmax
                 ,c=c
-                ,epsilon=epsilon
-                ,delta=delta
-                ,loss_gamma=loss_gamma
-                ,pi_inf=pi_inf
-                ,tau=tau
-                ,lambda=lambda
+		,epsilon=epsilon
+		,delta=delta
+		,sigma=sigma
+                ,pi=pi
+		,lambda=lambda
                 ,d=d
-                ,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
-                ,mu_t_bias=mu_t_bias
-                ,init_p2=init_p2
-                ,init_t2=init_t2
-                ,alpha=alpha
-                ,h=h
-                ,l=l
+                ,d_t2=d_t2
+		,r=r
+                ,mu_p_chr=mu_p_chr
+                ,mu_t_chr=mu_t_chr
+                ,mu_p_plasmid=mu_p_plasmid
+                ,mu_t_plasmid=mu_t_plasmid
+                ,nu=nu
+                ,init_p2_chr=init_p2_chr
+                ,init_p2_plasmid=init_p2_plasmid
+                ,init_t2_chr=init_t2_chr
+                ,init_t2_plasmid=init_t2_plasmid
+		,alpha=alpha
+		,h=h
+		,l=l
                 ,N=N
-                ,plasmid_signal_only=plasmid_signal_only
+		,psi_t1=psi_t1
+		,psi_t2=psi_t2
+		,f_t1=f_t1
+		,f_t2=f_t2
+		,beta_t1=beta_t1
+		,beta_t2=beta_t2
+		,gamma_loss_t1=gamma_loss_t1
+		,gamma_loss_t2=gamma_loss_t2
                 ,stringsAsFactors=F
                 ))
 
@@ -221,23 +240,35 @@ summarize.params(
                 ,kappa=kappa
                 ,bmax=bmax
                 ,c=c
-                ,epsilon=epsilon
-                ,delta=delta
-                ,loss_gamma=loss_gamma
-                ,pi_inf=pi_inf
-                ,tau=tau
-                ,lambda=lambda
+		,epsilon=epsilon
+		,delta=delta
+		,sigma=sigma
+                ,pi=pi
+		,lambda=lambda
                 ,d=d
-                ,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
-                ,mu_t_bias=mu_t_bias
-                ,init_p2=init_p2
-                ,init_t2=init_t2
-                ,alpha=alpha
-                ,h=h
-                ,l=l
+                ,d_t2=d_t2
+		,r=r
+                ,mu_p_chr=mu_p_chr
+                ,mu_t_chr=mu_t_chr
+                ,mu_p_plasmid=mu_p_plasmid
+                ,mu_t_plasmid=mu_t_plasmid
+                ,nu=nu
+                ,init_p2_chr=init_p2_chr
+                ,init_p2_plasmid=init_p2_plasmid
+                ,init_t2_chr=init_t2_chr
+                ,init_t2_plasmid=init_t2_plasmid
+		,alpha=alpha
+		,h=h
+		,l=l
                 ,N=N
+		,psi_t1=psi_t1
+		,psi_t2=psi_t2
+		,f_t1=f_t1
+		,f_t2=f_t2
+		,beta_t1=beta_t1
+		,beta_t2=beta_t2
+		,gamma_loss_t1=gamma_loss_t1
+		,gamma_loss_t2=gamma_loss_t2
                 )
 #
 #

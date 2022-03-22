@@ -1,7 +1,7 @@
 CXX=g++
-FLAGS=-Wall -O3 -std=c++17 -ggdb
-EXE=fishersexsel_bacteria.exe
-CPP=fishersexsel_bacteria.cpp individual.cpp
+FLAGS=-Wall -g -O3 -std=c++17
+EXE=fishersexsel_Gandon.exe
+CPP=fishersexsel_bacteria_Gandon_new.cpp individual.cpp
 HPP=individual.hpp
 
 

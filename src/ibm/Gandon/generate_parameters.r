@@ -6,88 +6,89 @@
 
 # number of replicates
 # for each unique parameter combinations
-nrep <- 1
+nrep <- 10
 
 # maximum number of times
-max_time <- 1e8
+max_time <- 10e8
 
-# p noplasmid init
-p_noplasmid_init <- 0.5 
+# initial fraction of infected individuals
+init_fraction_infected <-0.1
 
-N <- 10000
+# p good plasmid init
+p_good_init <- 0.0 
 
+N <- 7000
 # density-dependence parameter
 kappa <- 1.0 / N
 
 # max fecundity of the host
 bmax <- 50
 
-# cost of preference 
-c <- c(0.00,0.01)
+# initial resistance
+init_x <- 0.0
 
+# cost of resistance 
+c <- seq(0,5,by=0.5) 
 
 # clearance rate good plasmid
-loss_gamma <- 0.01
+gamma_G <- 1
+gamma_B <- 0
 
 # cost of trait
 #epsilon <- c(0.001,0.01, 0.1)
-epsilon <- 0.0
+#epsilon <- 0.0
 
 # cost of plasmid
 #delta <- c(0.01,0.1)
-delta <- 0.01
+#delta <- 0.01
 
-# conjugation rate 
+# force of infection 
 #psi <- c(0.01,0.05,0.1) 
-pi_inf <- 0.95 
+psi_G <- 0.0 
+psi_B <- 10 
 
 # death rates
-d <- 0.01 
+d <- 1 
+dG <- 1 
+dB <- 50 
 
 # recombination rate
-r <- 1e-6
+#r <- 1e-6
 
-# chromosomal integration rate
-tau <- 0.0
+# probability of co-infection 
+sigma <- 0.0
 
 # mutation rate
-#mu <- c(0.001,0.01)
-#mu_t_bias <- c(0.001,0.01)
-
-mu_p <- 1e-6
-mu_t_bias <- 1e-5
-mu_t <- 1e-6
+mu_x <- 0.01
+sdmu_x <- 0.01
 
 # initial frequencies of preference and trait
 #init_p2 <- c(0.01,0.1,0.8)
 #init_t2 <- c(0.01,0.1,0.8)
-init_p2 <- c(0.01,seq(0.1,0.9,0.1),0.99)
-init_t2 <- c(0.01,seq(0.1,0.9,0.1),0.99)
+#init_p2 <- 0.1
+#init_t2 <- 0.1
 
 # plasmid formation rate
-lambda <- 0.0
+#lambda <- 0.0
 
 # preference factor
 #alpha <- c(0.001,0.01,0.1)
-alpha <- 2
+#alpha <- 2
 
 # preference dominance coefficient
 #h <- c(0,0.5,1)
-h <- 0.5
+#h <- 0.5
 
 # trait dominance coefficient
 #l <- c(0,0.5,1)
-l <- 0.5
-
-# ornament signal from plasmid
-plasmid_signal_only = 1
+#l <- 0.5
 
 # get the directory name of this script
 # we use this so that we can
 script.dir <- getwd()
 
 # executable
-exe <- "./fishersexsel_bacteria.exe"
+exe <- "./sexsel_bacteria.exe"
 
 # save current time point to make
 # filenames that contain a time stamp
@@ -120,28 +121,23 @@ combinations <- as.data.frame(
         expand.grid(
                 exe=exe
                 ,max_time=max_time
-                ,p_noplasmid_init=p_noplasmid_init
+                ,p_good_init=p_good_init
                 ,kappa=kappa
                 ,bmax=bmax
                 ,c=c
-                ,epsilon=epsilon
-                ,delta=delta
-                ,loss_gamma=loss_gamma
-                ,pi_inf=pi_inf
-                ,tau=tau
-                ,lambda=lambda
+                ,gamma_G=gamma_G
+                ,gamma_B=gamma_B
+                ,psi_G=psi_G
+                ,psi_B=psi_B
                 ,d=d
-                ,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
-                ,mu_t_bias=mu_t_bias
-                ,init_p2=init_p2
-                ,init_t2=init_t2
-                ,alpha=alpha
-                ,h=h
-                ,l=l
-                ,N=N
-                ,plasmid_signal_only=plasmid_signal_only
+                ,dG=dG
+                ,dB=dB
+		,sigma=sigma
+                ,mu_x=mu_x
+                ,sdmu_x=sdmu_x
+                ,init_x=init_x
+		,init_fraction_infected=init_fraction_infected
+		,N=N
                 ,stringsAsFactors=F
                 ))
 
@@ -217,27 +213,23 @@ summarize.params <- function(...)
 summarize.params(
                 exe=exe
                 ,max_time=max_time
-                ,p_noplasmid_init=p_noplasmid_init
+                ,p_good_init=p_good_init
                 ,kappa=kappa
                 ,bmax=bmax
                 ,c=c
-                ,epsilon=epsilon
-                ,delta=delta
-                ,loss_gamma=loss_gamma
-                ,pi_inf=pi_inf
-                ,tau=tau
-                ,lambda=lambda
+                ,gamma_G=gamma_G
+                ,gamma_B=gamma_B
+                ,psi_G=psi_G
+                ,psi_B=psi_B
                 ,d=d
-                ,r=r
-                ,mu_p=mu_p
-                ,mu_t=mu_t
-                ,mu_t_bias=mu_t_bias
-                ,init_p2=init_p2
-                ,init_t2=init_t2
-                ,alpha=alpha
-                ,h=h
-                ,l=l
-                ,N=N
+                ,dG=dG
+                ,dB=dB
+		,sigma=sigma
+                ,mu_x=mu_x
+                ,sdmu_x=sdmu_x
+                ,init_x=init_x
+		,init_fraction_infected=init_fraction_infected
+		,N=N
                 )
 #
 #

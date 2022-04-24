@@ -16,7 +16,7 @@
 #include "plasmid.hpp"
 
 
-// C++ random number generation unsigned int seed = get_nanoseconds();
+// C++ random number generation 
 std::random_device rd;
 unsigned seed = rd();
 std::mt19937 rng_r{seed};
@@ -81,6 +81,16 @@ double gamma_loss = 0.0;
 double pi = 0.0;
 double pi_env = 0.0;
 
+// whether plasmid signals only 
+// reflecting a scenario where the plasmid
+// invades the recipient and is then accepted 
+// dependent on t or not. As in crispr
+//
+// if this variable is false, however,
+// then the signal is environmental and produced by
+// the donor cell preceding the donation of the plasmid
+bool plasmid_signal_only = true;
+
 // vector to contain attractiveness
 // of individuals to homozygous recipients
 double attr_homz_recip[3] = {0.0,0.0,0.0};
@@ -88,6 +98,16 @@ double attr_homz_recip[3] = {0.0,0.0,0.0};
 // vector to contain attractiveness
 // of individuals to heterozygous recipients
 double attr_hetz_recip[3] = {0.0,0.0,0.0};
+
+// whether plasmid signals only 
+// reflecting a scenario where the plasmid
+// invades the recipient and is then accepted 
+// dependent on t or not. As in crispr
+//
+// if this variable is false, however,
+// then the signal is environmental and produced by
+// the donor cell preceding the donation of the plasmid
+bool plasmid_signal_only = true;
 //
 //
 //chromosomal integration rate (plasmid integrated in chromosome)
@@ -196,8 +216,12 @@ double calc_attract_susceptible(
     }
 
     // check if infected has trait
-    int n_trait_alleles = geno_has_t2[geno_chr_infected] + 
-        geno_has_t2[geno_plasmid_infected]; 
+    int n_trait_alleles = geno_has_t2[geno_chr_infected];
+
+    if (!plasmid_signal_only)
+    {
+        n_trait_alleles += geno_has_t2[geno_plasmid_infected]; 
+    }
 
     return(attr_homz_recip[n_trait_alleles]);
 } // end calc_attractiveness
@@ -227,8 +251,12 @@ double calc_attract_infected(
         return(1.0);
     }
 
-    int n_trait_alleles = geno_has_t2[geno_chr_infected_donor] 
-        + geno_has_t2[geno_plasmid_infected_donor]; 
+    int n_trait_alleles = geno_has_t2[geno_chr_infected_donor];
+    
+    if (!plasmid_signal_only)
+    {
+        n_trait_alleles += geno_has_t2[geno_plasmid_infected_donor]; 
+    }
 
     return(n_pref_alleles == 2 ?
             attr_homz_recip[n_trait_alleles]
@@ -673,7 +701,8 @@ void init_arguments(int argc, char ** argv)
     N = atof(argv[22]);
     N_ep = atof(argv[23]);
     pi_env = atof(argv[24]);
-    base_name = argv[25];
+    plasmid_signal_only = atoi(argv[25]);
+    base_name = argv[26];
 
   // for homozygote (at preference allele) recipients 
     attr_homz_recip[0] = 1.0; // attractiveness individual without ornament
@@ -703,6 +732,7 @@ void write_parameters(std::ofstream &data_file)
         << "N" << ";" << N << std::endl
         << "N_ep" << ";" << N_ep << std::endl
         << "max_time" << ";" << max_time << std::endl
+        << "plasmid_signal_only" << ";" << plasmid_signal_only << std::endl
         << "p_noplasmid_init" << ";" << p_noplasmid_init << std::endl
         << "kappa" << ";" << kappa << std::endl
         << "bmax" << ";" << bmax << std::endl
